@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Forecasting 5-day stock volatility | ES 335 project</title>
+<meta name="description" content="A regression model that forecasts how much 30 large Indian stocks will move over the next five trading days. Enter your own inputs to get a forecast, or explore its predictions on unseen 2024–2026 data.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Schibsted+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F5F7FA;
+  --ink:#1B2430;
+  --muted:#54606F;
+  --rule:#D6DCE6;
+  --blue:#2447D6;
+  --blue-tint:#E6ECFB;
+  --blue-mid:#B9C7EE;
+  --grey:#7D8896;
+  --note-bg:#FFF6D6;
+  --note-line:#D9B33A;
+  --sans:"Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --serif:"Literata",Georgia,"Times New Roman",serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--serif);font-size:1.0625rem;line-height:1.7}
+img{max-width:100%;height:auto;display:block}
+a{color:var(--blue);text-underline-offset:3px}
+a:hover{text-decoration-thickness:2px}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:2px}
+.skip{position:absolute;left:-999px;top:8px;background:var(--ink);color:#fff;padding:8px 12px;border-radius:6px;z-index:20;font-family:var(--sans)}
+.skip:focus{left:12px}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+.prose{max-width:66ch}
+.num{font-variant-numeric:tabular-nums}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* top bar */
+.bar{position:sticky;top:0;z-index:10;background:rgba(245,247,250,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--rule)}
+.bar .wrap{display:flex;align-items:center;gap:24px;height:52px}
+.brand{font-family:var(--sans);font-weight:700;color:var(--ink);text-decoration:none;white-space:nowrap}
+.bar nav{display:flex;gap:18px;overflow-x:auto;scrollbar-width:none;font-family:var(--sans);font-weight:500;font-size:.95rem}
+.bar nav::-webkit-scrollbar{display:none}
+.bar nav a{color:var(--muted);text-decoration:none;white-space:nowrap;padding:4px 0}
+.bar nav a:hover{color:var(--blue)}
+
+/* headings */
+h1,h2,h3{font-family:var(--sans);line-height:1.15;margin:0;color:var(--ink)}
+h1{font-size:clamp(2rem,5.4vw,3.5rem);font-weight:700;letter-spacing:-.025em;max-width:20ch}
+h2{font-size:clamp(1.5rem,3vw,1.9rem);font-weight:700;letter-spacing:-.015em;margin-bottom:14px}
+h3{font-size:1.15rem;font-weight:600;margin:28px 0 8px}
+section{padding:56px 0 8px;scroll-margin-top:52px}
+section + section{border-top:1px solid var(--rule);margin-top:40px}
+p{margin:0 0 1em}
+.lead{font-size:1.2rem;line-height:1.6;max-width:56ch}
+.small{font-size:.92rem;color:var(--muted)}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88em;background:var(--blue-tint);padding:1px 5px;border-radius:4px}
+
+/* hero */
+.hero{padding:44px 0 8px}
+.hero .lead{margin-top:18px}
+.hero .result{margin-top:14px;max-width:62ch}
+
+/* explorer */
+.explorer{padding-top:28px}
+.controls{display:flex;flex-wrap:wrap;gap:14px 18px;align-items:end;margin:6px 0 14px;font-family:var(--sans)}
+.field{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--muted);font-weight:500}
+.field select,.field input[type=date]{font:inherit;font-size:1rem;color:var(--ink);background:#fff;border:1px solid var(--grey);border-radius:6px;padding:7px 10px;min-height:40px}
+.checks{display:flex;flex-wrap:wrap;gap:6px 18px;font-family:var(--sans);font-size:.95rem}
+.checks label{display:flex;align-items:center;gap:7px;cursor:pointer;min-height:32px}
+.checks input{width:18px;height:18px;accent-color:var(--blue)}
+.presets{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 16px;font-family:var(--sans)}
+.preset{font:inherit;font-size:.95rem;font-weight:500;color:var(--blue);background:transparent;border:1px solid var(--blue);border-radius:6px;padding:8px 12px;cursor:pointer;min-height:40px}
+.preset:hover{background:var(--blue-tint)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 22px;font-family:var(--sans);font-size:.92rem;margin:0 0 6px}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.swatch{width:30px;height:0;border-top:3px solid var(--ink)}
+.swatch.model{border-top-color:var(--blue)}
+.swatch.base{border-top:2px dashed var(--grey)}
+.chartbox{position:relative;background:#fff;border:1px solid var(--rule);border-radius:8px;padding:6px 4px 2px}
+#chart svg{display:block;width:100%;touch-action:pan-y}
+#chart text{font-family:var(--sans);font-size:11.5px;fill:var(--muted)}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:#fff;font-family:var(--sans);font-size:.85rem;line-height:1.45;padding:8px 10px;border-radius:6px;white-space:nowrap;display:none;z-index:5}
+.tip b{font-weight:600}
+.chart-help{font-family:var(--sans);font-size:.85rem;color:var(--muted);margin:8px 2px 0}
+.empty{padding:40px 16px;text-align:center;color:var(--muted);font-family:var(--sans)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:0;margin:18px 0 0;border-top:1px solid var(--rule);font-family:var(--sans)}
+.stats div{padding:12px 16px 12px 0;border-bottom:1px solid var(--rule)}
+.stats dt{font-size:.85rem;color:var(--muted);font-weight:500}
+.stats dd{margin:2px 0 0;font-size:1.2rem;font-weight:600;font-variant-numeric:tabular-nums}
+.stats dd small{display:block;font-size:.85rem;font-weight:500;color:var(--muted)}
+.stats .wide{grid-column:span 2}
+@media (max-width:560px){.stats .wide{grid-column:auto}}
+
+/* lists */
+ul,ol{margin:0 0 1em;padding-left:1.25em;max-width:66ch}
+li{margin:0 0 .45em}
+dl.glossary{display:grid;grid-template-columns:max-content 1fr;gap:6px 22px;max-width:70ch;margin:0 0 1.2em;font-size:1rem}
+dl.glossary dt{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88rem;padding-top:3px}
+dl.glossary dd{margin:0}
+@media (max-width:560px){dl.glossary{grid-template-columns:1fr;gap:0}dl.glossary dd{margin-bottom:10px}}
+
+.notice{max-width:66ch;background:var(--note-bg);border:1px dashed var(--note-line);border-radius:8px;padding:12px 16px;margin:0 0 1.2em;font-family:var(--sans);font-size:.95rem;line-height:1.55}
+
+/* figures */
+figure{margin:22px 0 28px}
+figure img{border:1px solid var(--rule);border-radius:8px;background:#fff}
+figcaption{font-family:var(--sans);font-size:.9rem;color:var(--muted);margin-top:8px;max-width:70ch}
+.figrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;align-items:start}
+
+/* split timeline */
+.timeline{display:flex;align-items:stretch;gap:4px;margin:16px 0 6px;font-family:var(--sans);font-size:.9rem}
+.timeline .seg{padding:12px 12px;border-radius:6px;min-width:0}
+.timeline .train{flex:2452 1 0;background:var(--blue-tint)}
+.timeline .val{flex:721 1 0;background:var(--blue-mid)}
+.timeline .test{flex:984 1 0;background:var(--blue);color:#fff}
+.timeline .gap{flex:0 0 8px;background:repeating-linear-gradient(45deg,var(--rule) 0 3px,transparent 3px 6px);border-radius:3px}
+.timeline b{display:block;font-weight:600}
+.timeline small{display:block;font-size:.82rem;opacity:.9}
+@media (max-width:640px){.timeline{flex-direction:column}.timeline .seg{flex:none!important}.timeline .gap{flex:0 0 8px;height:8px}}
+
+/* tables */
+.tablewrap{overflow-x:auto;margin:10px 0 22px}
+table{border-collapse:collapse;width:100%;font-family:var(--sans);font-size:.98rem}
+th,td{text-align:left;padding:10px 14px 10px 0;border-bottom:1px solid var(--rule);vertical-align:middle}
+th{font-weight:600;color:var(--muted);font-size:.88rem;border-bottom:1px solid var(--grey);white-space:nowrap}
+th.num,td.num{text-align:right;padding-right:16px;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.best td{font-weight:600}
+.barcell{position:relative;min-width:190px}
+.barcell .fill{display:block;height:8px;border-radius:2px;background:var(--grey);width:var(--w);margin-bottom:4px}
+tr.best .barcell .fill{background:var(--blue)}
+.barcell span.v{display:block;text-align:right}
+
+#lambda-chart{background:#fff;border:1px solid var(--rule);border-radius:8px;padding:6px 4px;max-width:720px}
+#lambda-chart svg{display:block;width:100%}
+#lambda-chart text{font-family:var(--sans);font-size:11.5px;fill:var(--muted)}
+
+pre{background:#fff;border:1px solid var(--rule);border-radius:8px;padding:14px 16px;overflow-x:auto;font-size:.9rem;line-height:1.6;max-width:66ch}
+pre code{background:none;padding:0}
+footer{margin-top:64px;padding:28px 0 48px;border-top:1px solid var(--rule);font-family:var(--sans);font-size:.92rem;color:var(--muted)}
+
+/* try the model */
+[hidden]{display:none!important}
+.cta{display:inline-flex;align-items:center;min-height:44px;padding:10px 18px;border-radius:6px;background:var(--blue);color:#fff;font-family:var(--sans);font-weight:600;text-decoration:none}
+.cta:hover{background:#1B38AE;color:#fff}
+.try-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:32px;align-items:start;margin-top:6px}
+@media (max-width:860px){.try-grid{grid-template-columns:minmax(0,1fr)}}
+fieldset{border:0;padding:0;margin:0 0 20px;min-width:0}
+legend{font-family:var(--sans);font-weight:700;font-size:1.05rem;padding:0;margin-bottom:10px}
+.fieldgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px 16px}
+.field label{color:var(--ink);font-weight:600;font-size:.92rem}
+.field input[type=number]{font:inherit;font-size:1rem;color:var(--ink);background:#fff;border:1px solid var(--grey);border-radius:6px;padding:7px 10px;min-height:40px;width:100%}
+.field select{width:100%}
+.hint{font-weight:400;font-size:.8rem;color:var(--muted);line-height:1.4}
+.err{font-size:.82rem;line-height:1.4;font-weight:500;min-height:0}
+.field.bad input{border-color:#B3261E;box-shadow:0 0 0 1px #B3261E}
+.field.bad .err{color:#B3261E}
+.field.warn .err{color:#7A5200}
+.result-panel{position:sticky;top:66px;background:#fff;border:1px solid var(--rule);border-radius:8px;padding:18px 20px 16px}
+@media (max-width:860px){.result-panel{position:static}}
+.result-panel h3{margin:0 0 6px;font-size:1rem}
+.result-panel h3 + .r-value{margin-top:0}
+.r-value{font-family:var(--sans);font-weight:700;font-size:clamp(2.3rem,6vw,3.1rem);line-height:1.05;letter-spacing:-.02em;color:var(--blue);margin:0 0 4px;font-variant-numeric:tabular-nums}
+.r-sub{font-family:var(--sans);font-size:.95rem;color:var(--muted);margin:0 0 12px;line-height:1.45}
+.r-list{margin:0 0 14px;border-top:1px solid var(--rule);font-family:var(--sans)}
+.r-list div{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--rule)}
+.r-list dt{color:var(--muted);font-size:.9rem}
+.r-list dd{margin:0;font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+.r-actual{background:var(--blue-tint);border-radius:6px;padding:10px 12px;margin:0 0 14px;font-family:var(--sans);font-size:.92rem;line-height:1.5}
+.result-panel h3.sub{margin-top:18px}
+.contrib{list-style:none;padding:0;margin:8px 0 12px;max-width:none}
+.contrib li{display:grid;grid-template-columns:minmax(0,1fr) 84px 52px;align-items:center;gap:8px;margin:0 0 7px;font-family:var(--sans);font-size:.9rem}
+.cb{height:8px;background:var(--blue-tint);border-radius:2px;overflow:hidden}
+.cb i{display:block;height:100%}
+.cb i.up{background:var(--blue)}
+.cb i.down{background:var(--grey)}
+.cv{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.preset[aria-pressed="true"]{background:var(--blue);color:#fff}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="#top">Volatility forecast</a>
+    <nav aria-label="Sections">
+      <a href="#try">Try it</a>
+      <a href="#explore">Explore</a>
+      <a href="#problem">Question</a>
+      <a href="#data">Data</a>
+      <a href="#method">Method</a>
+      <a href="#results">Results</a>
+      <a href="#errors">Errors</a>
+      <a href="#run">Code</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap">
+
+<div class="hero" id="top">
+  <h1>How much will a stock move over the next five trading days?</h1>
+  <p class="lead">A regression model for the size of price moves in 30 large Indian companies. It was trained on 2015–2021, tuned on 2022–2023, and tested on 2024 to September 2026, days it never saw.</p>
+  <p class="result">On the test period its error is <strong>10.7% lower</strong> than guessing the training-set average (95% range: 8.8% to 12.7%). It follows the general level of volatility, but not the sudden spikes.</p>
+  <p><a class="cta" href="#try">Try the model yourself</a></p>
+</div>
+
+<section id="try" class="try" aria-labelledby="try-h">
+  <h2 id="try-h">Try the model</h2>
+  <p class="prose">Enter what is known when a trading day closes and get the model’s forecast for how big that stock’s moves will be over the next five trading days. Start from a real example day, or change any value. This runs the actual fitted model in your browser: it clips and scales the inputs, then multiplies them by the ridge weights, exactly as the Python code does.</p>
+
+  <div id="try-body">
+    <div class="presets" id="examples" role="group" aria-label="Example days"></div>
+    <div class="try-grid">
+      <form id="try-form" novalidate></form>
+      <aside class="result-panel" id="result" aria-live="polite" aria-labelledby="r-h">
+        <h3 id="r-h">Forecast for the next five trading days</h3>
+        <p class="r-value" id="r-value">–</p>
+        <p class="r-sub" id="r-sub">Enter values to see a forecast.</p>
+        <dl class="r-list">
+          <div><dt>Likely range</dt><dd id="r-range">–</dd></div>
+          <div><dt>Training average (the baseline)</dt><dd id="r-base">–</dd></div>
+          <div><dt>Versus the baseline</dt><dd id="r-vs">–</dd></div>
+        </dl>
+        <div class="r-actual" id="r-actual" hidden></div>
+        <h3 class="sub">What moved the forecast</h3>
+        <ul class="contrib" id="r-contrib"></ul>
+        <p class="small" id="r-warn" hidden></p>
+        <p class="small" id="r-note"></p>
+      </aside>
+    </div>
+  </div>
+  <noscript><p class="notice">The calculator needs JavaScript.</p></noscript>
+</section>
+
+<section id="explore" class="explorer" aria-labelledby="explore-h">
+  <h2 id="explore-h">Explore the predictions</h2>
+  <p class="prose">Pick a stock and a window. Each point is one test day: the model’s forecast for the next five days, next to what actually happened.</p>
+
+  <div id="explorer-body">
+    <div class="controls">
+      <label class="field">Stock
+        <select id="stock"></select>
+      </label>
+      <label class="field">From
+        <input type="date" id="from">
+      </label>
+      <label class="field">To
+        <input type="date" id="to">
+      </label>
+      <div class="checks">
+        <label><input type="checkbox" id="showBase" checked> Show baseline</label>
+        <label><input type="checkbox" id="logScale"> Log scale</label>
+      </div>
+    </div>
+
+    <div class="presets" role="group" aria-label="Example views">
+      <button type="button" class="preset" data-preset data-stock="RELIANCE" data-from="2024-01-02" data-to="2026-09-11">Whole test period</button>
+      <button type="button" class="preset" data-preset data-stock="RELIANCE" data-from="2024-05-15" data-to="2024-07-15">A spike the model misses</button>
+      <button type="button" class="preset" data-preset data-stock="HDFCBANK" data-from="2025-08-20" data-to="2025-09-30">A quiet stretch it over-predicts</button>
+    </div>
+
+    <div class="legend" aria-hidden="true">
+      <span><i class="swatch"></i>Actual volatility</span>
+      <span><i class="swatch model"></i>Model prediction</span>
+      <span><i class="swatch base"></i>Baseline: training average</span>
+    </div>
+
+    <div class="chartbox"><div id="chart"></div><div class="tip" id="tip" role="presentation"></div></div>
+    <p class="chart-help">Hover, tap or use the left and right arrow keys on the chart to read values. Lines break where the data has gaps of more than a week.</p>
+
+    <dl class="stats" id="stats" aria-live="polite">
+      <div><dt>Days in view</dt><dd id="s-n">–</dd></div>
+      <div><dt>Model error (RMSE)</dt><dd id="s-model">–</dd></div>
+      <div><dt>Baseline error (RMSE)</dt><dd id="s-base">–</dd></div>
+      <div><dt>Model versus baseline</dt><dd id="s-diff">–</dd></div>
+      <div class="wide"><dt>Largest miss in view</dt><dd id="s-miss">–</dd></div>
+    </dl>
+    <p class="small prose">Error is measured on the log scale, the scale the model was fitted on, so a miss of 0.5 means roughly a 1.6 times difference. Lower is better. Predictions are shown as volatility, converted back from the log scale.</p>
+  </div>
+  <noscript><p class="notice">The explorer needs JavaScript. The results below are plain text and images.</p></noscript>
+</section>
+
+<section id="problem" aria-labelledby="problem-h">
+  <h2 id="problem-h">The question</h2>
+  <div class="prose">
+    <p>For each stock and each day, predict how large its price moves will be over the next five trading days, using only what was known when that day’s market closed.</p>
+    <p>The quantity being predicted, <code>target_rv_5</code>, is the square root of the sum of the squared daily log returns over the next five trading days. A value of 0.03 means those five daily moves add up, in root-sum-of-squares terms, to about 3%. It measures how big the moves are, not whether prices rise or fall.</p>
+    <p>The model predicts the logarithm of this quantity. Volatility is skewed, with a few wild weeks stretching the scale, and the log makes it far more even.</p>
+  </div>
+  <figure>
+    <img src="assets/eda1_target_log_transform.png" alt="Two histograms of the target: the original values are bunched on the left with a long right tail, and the log values form a roughly symmetric bell shape." width="1500" height="525" loading="lazy">
+    <figcaption>The target before (left) and after (right) taking the log.</figcaption>
+  </figure>
+  <div class="prose">
+    <h3>What this does not claim</h3>
+    <p>The model says nothing about the direction of prices and is not trading advice. The conclusions apply to these 30 stocks and to 2015–2026.</p>
+  </div>
+</section>
+
+<section id="data" aria-labelledby="data-h">
+  <h2 id="data-h">The data</h2>
+  <div class="prose">
+    <p>One row is one stock on one trading day: 30 large Indian listed companies, 77,490 rows, from 7 April 2015 to 11 September 2026.</p>
+  </div>
+  <p class="notice"><strong>Fill in before publishing:</strong> the data provider, the date it was obtained, the terms of use, and whether derived data may be shared. Replace this box with a sentence such as “Obtained from … on … under …”.</p>
+
+  <h3>The inputs</h3>
+  <dl class="glossary">
+    <dt>log_ret</dt><dd>Today’s log return.</dd>
+    <dt>ret_lag1</dt><dd>The previous trading day’s return (rebuilt, see below).</dd>
+    <dt>abs_ret</dt><dd>The size of today’s return, ignoring direction.</dd>
+    <dt>rv_5, rv_21, rv_63</dt><dd>Realized volatility over the last 5, 21 and 63 days: the standard deviation of daily log returns, in daily units.</dd>
+    <dt>hl_range</dt><dd>The size of today’s high-to-low price range.</dd>
+    <dt>vol_ratio</dt><dd>Today’s trading volume relative to its recent level.</dd>
+    <dt>mkt_ret, mkt_rv_21</dt><dd>The market’s return today and its 21-day volatility.</dd>
+    <dt>vix</dt><dd>A market volatility index.</dd>
+    <dt>stock, weekday</dt><dd>Which company and which day of the week, as 0/1 columns.</dd>
+  </dl>
+
+  <h3>What was checked, and what was found</h3>
+  <ul>
+    <li>No missing, infinite or duplicate rows.</li>
+    <li><code>ret_lag1</code> was identical to today’s return in every row, so it could not be yesterday’s. It was rebuilt from the previous row.</li>
+    <li><code>neg_ret</code> is fully determined by two other columns (<code>log_ret = abs_ret + 2 × neg_ret</code>), so it was dropped. Keeping it would make the regression ill-defined.</li>
+    <li>36 rows had a zero price range and a zero volume ratio. 29 of them fall on 18 March 2025, which points to a bad data feed. They were removed.</li>
+    <li>Nine gaps of 30 days or more hit all stocks at once. The longest is 88 days, from 30 April to 27 July 2026. The first row after each gap was removed, because its “previous day” return is not from the previous day.</li>
+    <li>Extreme moves, such as 23 March 2020, look like real events and were kept.</li>
+  </ul>
+  <p class="prose">In total 336 of 77,490 rows (0.43%) were removed.</p>
+  <figure>
+    <img src="assets/eda2_volatility_over_time.png" alt="Line chart of 21-day volatility for RELIANCE, TCS and SBIN from 2015 to 2026, with shared spikes in early 2020." width="1650" height="600" loading="lazy">
+    <figcaption>21-day volatility for three stocks. Volatility rises and falls together across stocks, with a large shared spike in early 2020.</figcaption>
+  </figure>
+</section>
+
+<section id="method" aria-labelledby="method-h">
+  <h2 id="method-h">How the model was built</h2>
+  <div class="prose">
+    <p>The data is split by time, never shuffled. Training uses the past, tuning uses the next stretch, and the test set is the final stretch, used once.</p>
+  </div>
+  <div class="timeline" role="img" aria-label="Timeline: training from April 2015 to December 2021, a gap, validation 2022 to 2023, a gap, test 2024 to September 2026.">
+    <div class="seg train"><b>Train</b>Apr 2015 – Dec 2021<small>44,786 rows</small></div>
+    <div class="gap"></div>
+    <div class="seg val"><b>Validation</b>2022 – 2023<small>14,638 rows</small></div>
+    <div class="gap"></div>
+    <div class="seg test"><b>Test</b>2024 – Sep 2026<small>17,430 rows</small></div>
+  </div>
+  <p class="small prose">Hatched bars are 8-day gaps (not to scale). The target looks five trading days ahead, so each set stops 8 days before the next one starts. Without the gap, a training label would be built from days that belong to the next set.</p>
+
+  <h3>Preparing the data</h3>
+  <ol>
+    <li>Clean and check the rows, as listed above.</li>
+    <li>Take the log of the target.</li>
+    <li>Turn stock and weekday into 0/1 columns, dropping one category of each so that no column can be rebuilt from the others.</li>
+    <li>Cap the most extreme 0.1% at each end of two heavy-tailed inputs, <code>vol_ratio</code> and <code>hl_range</code>.</li>
+    <li>Scale the numeric inputs to mean 0 and spread 1.</li>
+  </ol>
+  <p class="prose">The caps and the scaling use numbers measured on the training set only. Nothing from validation or test leaks into the preparation.</p>
+
+  <h3>The models</h3>
+  <ul>
+    <li><strong>Training average.</strong> The same prediction for every row. Any real model has to beat this.</li>
+    <li><strong>Persistence.</strong> Recent volatility plus a constant: “next week will look like this week”.</li>
+    <li><strong>One-feature regression.</strong> The log of <code>rv_5</code> alone, with the data choosing the weight.</li>
+    <li><strong>Linear regression.</strong> All 44 inputs.</li>
+    <li><strong>Ridge regression.</strong> Linear regression with a penalty that shrinks the weights. The penalty strength, λ, is chosen on the validation set.</li>
+  </ul>
+  <p class="prose">Both regressions are written from scratch with numpy, using the normal equation. No machine learning library is used.</p>
+
+  <h3>Choosing λ</h3>
+  <div id="lambda-chart"></div>
+  <p class="small prose">Validation error for each λ. It falls until λ = 1000 and rises after. The curve is flat near the minimum, so the exact value matters little. The test set played no part in this choice.</p>
+</section>
+
+<section id="results" aria-labelledby="results-h">
+  <h2 id="results-h">Results</h2>
+  <div class="prose">
+    <p>All numbers below are on the test period (2024 to September 2026), with λ fixed from validation. Error is RMSE on the log scale, so lower is better.</p>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <caption class="sr">Test set results by model</caption>
+      <thead><tr><th>Model</th><th class="num">Test error (RMSE)</th><th class="num">Typical miss (MAE)</th><th class="num">Versus training average</th></tr></thead>
+      <tbody>
+        <tr><td>Training average</td><td class="num barcell"><span class="fill" style="--w:78.6%"></span><span class="v">0.5503</span></td><td class="num">0.4343</td><td class="num">baseline</td></tr>
+        <tr><td>Persistence</td><td class="num barcell"><span class="fill" style="--w:95.3%"></span><span class="v">0.6674</span></td><td class="num">0.5227</td><td class="num">21.3% worse</td></tr>
+        <tr><td>One-feature regression</td><td class="num barcell"><span class="fill" style="--w:75%"></span><span class="v">0.5253</span></td><td class="num">0.4121</td><td class="num">4.5% better</td></tr>
+        <tr><td>Linear regression</td><td class="num barcell"><span class="fill" style="--w:71.2%"></span><span class="v">0.4981</span></td><td class="num">0.3903</td><td class="num">9.5% better</td></tr>
+        <tr class="best"><td>Ridge regression</td><td class="num barcell"><span class="fill" style="--w:70.2%"></span><span class="v">0.4915</span></td><td class="num">0.3847</td><td class="num">10.7% better</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="prose">
+    <p>Persistence does worse than the plain average. Recent volatility and next week’s volatility are only weakly related in this data: the correlation of their logs is about 0.3, so copying recent volatility adds more noise than it removes.</p>
+    <h3>Is the gain real?</h3>
+    <p>Resampling whole weeks of the test period 1,000 times gives a 95% range of 8.8% to 12.7% for ridge’s improvement over the baseline. Weeks are resampled, not single days, because neighbouring days share the same five-day window and are not independent. Ridge also beats the baseline in every test year:</p>
+  </div>
+  <div class="tablewrap" style="max-width:520px">
+    <table>
+      <caption class="sr">Ridge versus baseline error by test year</caption>
+      <thead><tr><th>Year</th><th class="num">Ridge error</th><th class="num">Baseline error</th></tr></thead>
+      <tbody>
+        <tr><td>2024</td><td class="num">0.4835</td><td class="num">0.5145</td></tr>
+        <tr><td>2025</td><td class="num">0.5036</td><td class="num">0.5937</td></tr>
+        <tr><td>2026 (to September)</td><td class="num">0.4796</td><td class="num">0.5207</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="prose">
+    <h3>What matters, and what doesn’t</h3>
+    <p>Among the scaled numeric inputs, <code>vix</code> (weight 0.114) and <code>hl_range</code> (0.094) carry the largest weights, followed by <code>rv_21</code> and <code>rv_63</code> (about 0.05 each). Several inputs move together, so treat this ranking loosely.</p>
+    <p>Checks on the validation set show how much each part of the model contributes:</p>
+  </div>
+  <div class="tablewrap" style="max-width:620px">
+    <table>
+      <caption class="sr">Sensitivity checks on the validation set</caption>
+      <thead><tr><th>Variant</th><th class="num">Validation error</th><th class="num">Versus average</th></tr></thead>
+      <tbody>
+        <tr><td>All inputs (the final model)</td><td class="num">0.4529</td><td class="num">13.9% better</td></tr>
+        <tr><td>Only rv_5, rv_21, rv_63</td><td class="num">0.4640</td><td class="num">11.8% better</td></tr>
+        <tr><td>No stock or weekday columns</td><td class="num">0.4517</td><td class="num">14.1% better</td></tr>
+        <tr><td>Training on 2018 onwards only</td><td class="num">0.4602</td><td class="num">12.5% better</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="prose">
+    <p>Past volatility alone gets most of the way, the market and price-range inputs add about two points, and the stock and weekday columns add nothing. Less training history costs about a point and a half.</p>
+  </div>
+  <div class="figrow">
+    <figure>
+      <img src="assets/plot2_scatter.png" alt="Scatter plot of predicted against actual log volatility. Predictions sit in a narrow vertical band while actual values spread much wider." width="825" height="825" loading="lazy">
+      <figcaption>Predicted against actual (a sample of 3,000 test days). The model’s predictions sit in a narrow band while actual values spread far wider: it captures a modest share of the variation, with squared error about 20% below the baseline’s.</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/plot3_rmse_per_stock.png" alt="Horizontal bar chart of ridge error for each of the 30 stocks, ranging from about 0.43 to 0.55." width="1200" height="1050" loading="lazy">
+      <figcaption>Error for each stock on the test period. It ranges from 0.428 (TECHM) to 0.553 (ICICIBANK), so no stock is badly broken.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="errors" aria-labelledby="errors-h">
+  <h2 id="errors-h">Where it goes wrong</h2>
+  <div class="prose">
+    <p>The ten largest test errors are all over-predictions: the model expected ordinary calm-market volatility and the real value was far lower. They come from HDFCBANK (8–10 September 2025), NTPC (11 and 14 July 2025), ICICIBANK (28 and 30 April 2025, 4 September 2025), ASIANPAINT (21 November 2025) and HCLTECH (28 April 2026).</p>
+    <ul>
+      <li><strong>Nine are genuinely quiet weeks in the data.</strong> The next five daily moves were all below 0.3%, so targets of 0.002–0.004 follow directly from the returns. These are extreme: the median target is 0.029, and only 0.026% of rows fall below 0.0035.</li>
+      <li><strong>The inputs gave no warning.</strong> The model predicts a typical calm-market level and cannot reach tails this low. The log scale also magnifies them: a tenfold miss in volatility becomes a large error.</li>
+      <li><strong>One needs a caution.</strong> HDFCBANK’s daily moves of 0.02–0.05% for about a week, while its intraday range stayed near 1%, are unusual for a large bank. It may be a real quiet spell or a data issue; the file alone cannot settle it.</li>
+      <li><strong>HCLTECH is a data-gap artefact.</strong> The data has no rows between 30 April and 27 July 2026, and that target was computed from trading days missing from the file, so it cannot be reproduced from the rows available.</li>
+    </ul>
+    <p>A broader pattern: on the calmest quarter of test days the model over-predicts by 0.146 on average on the log scale, while on the most stressed quarter the average error is only −0.011.</p>
+    <p><button type="button" class="preset" data-preset data-stock="HDFCBANK" data-from="2025-08-20" data-to="2025-09-30">See HDFCBANK, September 2025, in the explorer</button></p>
+  </div>
+
+  <h3>Limitations</h3>
+  <ul>
+    <li>It forecasts the size of price moves, not their direction.</li>
+    <li>Errors are correlated from day to day (0.77 between a stock’s error and the previous day’s), because five-day target windows overlap. The effective number of independent test points is smaller than the number of rows.</li>
+    <li>The model explains only a modest share of the variation and cannot anticipate sudden spikes or near-zero weeks.</li>
+    <li>One market regime in the test period, and only 30 large stocks, so the results may not carry over to other stocks or periods.</li>
+    <li>The model is linear. A nonlinear model or extra inputs, such as longer-horizon volatility, might do better; this project did not test them.</li>
+  </ul>
+</section>
+
+<section id="run" aria-labelledby="run-h">
+  <h2 id="run-h">Run the code</h2>
+  <div class="prose">
+    <p>Put the three scripts and <code>dataset.csv</code> in one folder, then run them in order. They use only pandas, numpy and matplotlib. Split dates are fixed and the random seeds are fixed, so the numbers on this page can be reproduced.</p>
+  </div>
+<pre><code>pip install pandas numpy matplotlib
+python preprocessing.py
+python modelling.py
+python evaluation.py</code></pre>
+  <ul>
+    <li><a href="code/preprocessing.py">preprocessing.py</a>: cleaning, features, time split, train-only capping and scaling, integrity checks.</li>
+    <li><a href="code/modelling.py">modelling.py</a>: metrics, baselines, ridge and linear regression, tuning λ and sensitivity checks on validation.</li>
+    <li><a href="code/evaluation.py">evaluation.py</a>: the final test evaluation, error analysis, bootstrap range, plots and the predictions used by the explorer.</li>
+    <li><a href="code/export_model.py">export_model.py</a>: writes <code>model.js</code>, the fitted weights and scaling numbers that the calculator uses. It also checks that the browser formula reproduces the Python predictions on all 17,430 test rows.</li>
+  </ul>
+  <p class="prose small">The dataset itself is not included in this repository. <code>model.js</code> holds the fitted model’s numbers and five example days; <code>data.js</code> holds the model’s test-period predictions.</p>
+</section>
+
+</div>
+</main>
+
+<footer>
+  <div class="wrap">Aditya Deshwal, ES 335 Machine Learning project, IIT Gandhinagar.</div>
+</footer>
+
+<script src="model.js"></script>
+<script src="data.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var D = window.VOL_DATA;
+  var MS = 86400000;
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* ---------- the small lambda chart (does not need data.js) ---------- */
+  var LAMBDA = [[0.01, 0.45966], [0.1, 0.45965], [1, 0.45963], [10, 0.45943], [100, 0.45788], [1000, 0.45286], [10000, 0.45526]];
+
+  function drawLambda() {
+    var box = $("lambda-chart");
+    if (!box) return;
+    var W = Math.max(300, box.clientWidth || 640), H = 230;
+    var m = { l: 56, r: 18, t: 18, b: 38 };
+    var pw = W - m.l - m.r, ph = H - m.t - m.b;
+    var lo = 0.4520, hi = 0.4600;
+    var xs = function (lam) { return m.l + (Math.log10(lam) - Math.log10(0.01)) / (Math.log10(10000) - Math.log10(0.01)) * pw; };
+    var ys = function (v) { return m.t + (1 - (v - lo) / (hi - lo)) * ph; };
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Validation error for each lambda: flat until lambda 10, lowest at 1000, higher at 10000.">';
+    [0.452, 0.456, 0.460].forEach(function (v) {
+      s += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + ys(v) + '" y2="' + ys(v) + '" stroke="#D6DCE6"/>';
+      s += '<text x="' + (m.l - 8) + '" y="' + (ys(v) + 4) + '" text-anchor="end">' + v.toFixed(3) + '</text>';
+    });
+    var path = "";
+    LAMBDA.forEach(function (p, i) { path += (i ? "L" : "M") + xs(p[0]).toFixed(1) + " " + ys(p[1]).toFixed(1); });
+    s += '<path d="' + path + '" fill="none" stroke="#2447D6" stroke-width="2.5"/>';
+    LAMBDA.forEach(function (p) {
+      var best = p[0] === 1000;
+      s += '<circle cx="' + xs(p[0]).toFixed(1) + '" cy="' + ys(p[1]).toFixed(1) + '" r="' + (best ? 6 : 4) + '" fill="' + (best ? "#2447D6" : "#fff") + '" stroke="#2447D6" stroke-width="2"/>';
+      s += '<text x="' + xs(p[0]).toFixed(1) + '" y="' + (H - m.b + 18) + '" text-anchor="middle">' + (p[0] < 1 ? p[0] : p[0].toLocaleString("en-US")) + '</text>';
+    });
+    s += '<text x="' + xs(1000) + '" y="' + (ys(0.45286) - 12) + '" text-anchor="middle" style="fill:#1B2430;font-weight:600">best: 1000</text>';
+    s += '<text x="' + (m.l + pw / 2) + '" y="' + (H - 2) + '" text-anchor="middle">λ (penalty strength, log scale)</text>';
+    s += '</svg>';
+    box.innerHTML = s;
+  }
+
+  /* ---------- the explorer ---------- */
+  if (!D) {
+    $("explorer-body").innerHTML = '<p class="notice">The prediction data file (data.js) was not found next to this page, so the explorer is switched off. The rest of the page works without it.</p>';
+    drawLambda();
+    window.addEventListener("resize", drawLambda);
+    return;
+  }
+
+  var state = { stock: "RELIANCE", from: D.start, to: D.end, showBase: true, log: false };
+  var chart = $("chart"), tip = $("tip");
+  var current = null; // what the chart currently shows
+
+  function tm(iso) { return Date.parse(iso + "T00:00:00Z"); }
+  function fmtDate(iso) {
+    return new Date(tm(iso)).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  }
+  function fv(v) { return v.toFixed(4); }
+
+  function getView() {
+    var s = D.stocks[state.stock], idx = [], times = [];
+    for (var i = 0; i < s.d.length; i++) {
+      if (s.d[i] >= state.from && s.d[i] <= state.to) { idx.push(i); times.push(tm(s.d[i])); }
+    }
+    return { s: s, idx: idx, times: times };
+  }
+
+  function computeStats(v) {
+    var lm = Math.log(D.meanVol), sr = 0, sm = 0, worst = -1, wi = -1;
+    for (var k = 0; k < v.idx.length; k++) {
+      var i = v.idx[k], la = Math.log(v.s.a[i]);
+      var er = la - Math.log(v.s.r[i]), em = la - lm;
+      sr += er * er; sm += em * em;
+      if (Math.abs(er) > worst) { worst = Math.abs(er); wi = i; }
+    }
+    var n = v.idx.length;
+    return { n: n, model: Math.sqrt(sr / n), base: Math.sqrt(sm / n), wi: wi };
+  }
+
+  function showStats(v) {
+    if (!v.idx.length) {
+      ["s-n", "s-model", "s-base", "s-diff", "s-miss"].forEach(function (id) { $(id).textContent = "–"; });
+      return;
+    }
+    var st = computeStats(v);
+    $("s-n").textContent = st.n.toLocaleString("en-US");
+    $("s-model").textContent = st.model.toFixed(3);
+    $("s-base").textContent = st.base.toFixed(3);
+    var diff = (st.base - st.model) / st.base * 100;
+    if (Math.abs(diff) < 0.5) {
+      $("s-diff").innerHTML = "About the same<small>The model is no better than the baseline here</small>";
+    } else {
+      $("s-diff").innerHTML = Math.abs(diff).toFixed(1) + "% " + (diff > 0 ? "lower" : "higher") +
+        "<small>" + (diff > 0 ? "The model beats the baseline here" : "The baseline is better here") + "</small>";
+    }
+    var a = v.s.a[st.wi], r = v.s.r[st.wi];
+    $("s-miss").innerHTML = fmtDate(v.s.d[st.wi]) + "<small>Actual " + fv(a) + ", predicted " + fv(r) +
+      " (" + (r > a ? "over" : "under") + "-predicted " + (Math.max(a, r) / Math.min(a, r)).toFixed(1) + " times)</small>";
+  }
+
+  function niceStep(raw) {
+    var steps = [0.002, 0.005, 0.01, 0.02, 0.025, 0.05, 0.1];
+    for (var i = 0; i < steps.length; i++) if (steps[i] >= raw) return steps[i];
+    return 0.1;
+  }
+
+  function monthTicks(t0, t1, maxTicks) {
+    var d0 = new Date(t0), y = d0.getUTCFullYear(), mo = d0.getUTCMonth();
+    var steps = [1, 2, 3, 6, 12, 24], ticks = [];
+    for (var s = 0; s < steps.length; s++) {
+      ticks = [];
+      var mm = mo, cur = Date.UTC(y, mm, 1);
+      if (cur < t0) { mm += 1; cur = Date.UTC(y, mm, 1); }
+      while (cur <= t1) { ticks.push(cur); mm += steps[s]; cur = Date.UTC(y, mm, 1); }
+      if (ticks.length <= maxTicks) return ticks;
+    }
+    return ticks;
+  }
+
+  function draw() {
+    var v = getView();
+    showStats(v);
+    current = null;
+    tip.style.display = "none";
+
+    if (!v.idx.length) {
+      chart.innerHTML = '<p class="empty">No test days in this window. Choose dates between ' + fmtDate(D.start) + ' and ' + fmtDate(D.end) + '.</p>';
+      return;
+    }
+
+    var W = Math.max(300, chart.clientWidth || 900), H = W < 560 ? 300 : 420;
+    var m = { l: W < 560 ? 48 : 60, r: 14, t: 14, b: 32 };
+    var pw = W - m.l - m.r, ph = H - m.t - m.b;
+    var s = v.s, idx = v.idx, times = v.times;
+
+    var t0 = times[0], t1 = times[times.length - 1];
+    if (t1 === t0) { t0 -= MS; t1 += MS; }
+
+    var lo = Infinity, hi = -Infinity;
+    idx.forEach(function (i) {
+      lo = Math.min(lo, s.a[i], s.r[i]); hi = Math.max(hi, s.a[i], s.r[i]);
+    });
+    if (state.showBase) { lo = Math.min(lo, D.meanVol); hi = Math.max(hi, D.meanVol); }
+
+    var ymin, ymax;
+    if (state.log) { ymin = lo * 0.85; ymax = hi * 1.15; } else { ymin = 0; ymax = hi * 1.08; }
+
+    var xp = function (t) { return m.l + (t - t0) / (t1 - t0) * pw; };
+    var yp = function (val) {
+      if (state.log) return m.t + (1 - (Math.log(val) - Math.log(ymin)) / (Math.log(ymax) - Math.log(ymin))) * ph;
+      return m.t + (1 - val / ymax) * ph;
+    };
+
+    var yticks = [];
+    if (state.log) {
+      [0.002, 0.003, 0.005, 0.01, 0.02, 0.03, 0.05, 0.1, 0.2].forEach(function (c) { if (c >= ymin && c <= ymax) yticks.push(c); });
+    } else {
+      var step = niceStep(ymax / 5);
+      for (var tv = 0; tv <= ymax; tv += step) yticks.push(tv);
+    }
+    var decimals = (state.log || (yticks.length > 1 && yticks[1] - yticks[0] < 0.01)) ? 3 : 2;
+
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" id="chart-svg" tabindex="0" role="img" ' +
+      'aria-label="Line chart for ' + state.stock + ' from ' + fmtDate(s.d[idx[0]]) + ' to ' + fmtDate(s.d[idx[idx.length - 1]]) +
+      ' of actual volatility, the model prediction and the baseline. Use the left and right arrow keys to read values."><g>';
+
+    yticks.forEach(function (tv) {
+      svg += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + yp(tv).toFixed(1) + '" y2="' + yp(tv).toFixed(1) + '" stroke="#E3E8EF"/>';
+      svg += '<text x="' + (m.l - 8) + '" y="' + (yp(tv) + 4).toFixed(1) + '" text-anchor="end">' + tv.toFixed(decimals) + '</text>';
+    });
+
+    var spanDays = (t1 - t0) / MS;
+    var xticks = [], labelOpts;
+    if (spanDays > 75) {
+      xticks = monthTicks(t0, t1, W < 560 ? 4 : 8);
+      labelOpts = { month: "short", year: "numeric", timeZone: "UTC" };
+    } else {
+      for (var q = 0; q <= 5; q++) xticks.push(t0 + (t1 - t0) * q / 5);
+      labelOpts = { day: "numeric", month: "short", timeZone: "UTC" };
+    }
+    xticks.forEach(function (tv) {
+      svg += '<line x1="' + xp(tv).toFixed(1) + '" x2="' + xp(tv).toFixed(1) + '" y1="' + (H - m.b) + '" y2="' + (H - m.b + 5) + '" stroke="#7D8896"/>';
+      svg += '<text x="' + xp(tv).toFixed(1) + '" y="' + (H - m.b + 19) + '" text-anchor="middle">' + new Date(tv).toLocaleDateString("en-GB", labelOpts) + '</text>';
+    });
+    svg += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + (H - m.b) + '" y2="' + (H - m.b) + '" stroke="#7D8896"/>';
+
+    function pathFor(arr) {
+      var d = "";
+      for (var k = 0; k < idx.length; k++) {
+        var brk = k === 0 || (times[k] - times[k - 1]) > 7 * MS;
+        d += (brk ? "M" : "L") + xp(times[k]).toFixed(1) + " " + yp(arr[idx[k]]).toFixed(1);
+      }
+      return d;
+    }
+
+    if (state.showBase) {
+      svg += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + yp(D.meanVol).toFixed(1) + '" y2="' + yp(D.meanVol).toFixed(1) + '" stroke="#7D8896" stroke-width="2" stroke-dasharray="6 5"/>';
+    }
+    svg += '<path d="' + pathFor(s.a) + '" fill="none" stroke="#1B2430" stroke-width="1.6" stroke-linejoin="round"/>';
+    svg += '<path d="' + pathFor(s.r) + '" fill="none" stroke="#2447D6" stroke-width="2.4" stroke-linejoin="round"/>';
+
+    svg += '<g id="cross" style="display:none"><line id="cx" y1="' + m.t + '" y2="' + (H - m.b) + '" stroke="#1B2430" stroke-opacity=".35"/>' +
+      '<circle id="ca" r="4.5" fill="#1B2430"/><circle id="cr" r="4.5" fill="#2447D6"/></g>';
+    svg += '<rect id="hit" x="' + m.l + '" y="' + m.t + '" width="' + pw + '" height="' + ph + '" fill="transparent"/>';
+    svg += '</g></svg>';
+    chart.innerHTML = svg;
+
+    current = { v: v, xp: xp, yp: yp, W: W, m: m, k: -1 };
+    bindChart();
+  }
+
+  function showAt(k) {
+    if (!current) return;
+    var v = current.v, i = v.idx[k], s = v.s;
+    var x = current.xp(v.times[k]);
+    var svg = $("chart-svg");
+    $("cross").style.display = "";
+    $("cx").setAttribute("x1", x); $("cx").setAttribute("x2", x);
+    $("ca").setAttribute("cx", x); $("ca").setAttribute("cy", current.yp(s.a[i]));
+    $("cr").setAttribute("cx", x); $("cr").setAttribute("cy", current.yp(s.r[i]));
+    current.k = k;
+
+    tip.innerHTML = "<b>" + fmtDate(s.d[i]) + "</b><br>Actual " + fv(s.a[i]) + "<br>Model " + fv(s.r[i]) +
+      (state.showBase ? "<br>Baseline " + fv(D.meanVol) : "");
+    tip.style.display = "block";
+    var box = chart.parentNode.getBoundingClientRect();
+    var rect = svg.getBoundingClientRect();
+    var left = (rect.left - box.left) + x * (rect.width / current.W) + 14;
+    var tw = tip.offsetWidth;
+    if (left + tw > box.width - 4) left = left - tw - 28;
+    tip.style.left = Math.max(4, left) + "px";
+    tip.style.top = (rect.top - box.top + 20) + "px";
+  }
+
+  function hideAt() {
+    if (!current) return;
+    var c = $("cross"); if (c) c.style.display = "none";
+    tip.style.display = "none";
+  }
+
+  function bindChart() {
+    var svg = $("chart-svg"), hit = $("hit");
+    function nearest(evt) {
+      var rect = svg.getBoundingClientRect();
+      var x = (evt.clientX - rect.left) * (current.W / rect.width);
+      var best = 0, bd = Infinity;
+      for (var k = 0; k < current.v.times.length; k++) {
+        var d = Math.abs(current.xp(current.v.times[k]) - x);
+        if (d < bd) { bd = d; best = k; }
+      }
+      return best;
+    }
+    hit.addEventListener("pointermove", function (e) { showAt(nearest(e)); });
+    hit.addEventListener("pointerdown", function (e) { showAt(nearest(e)); });
+    hit.addEventListener("pointerleave", hideAt);
+    svg.addEventListener("keydown", function (e) {
+      var n = current.v.idx.length;
+      if (e.key === "ArrowRight") { showAt(Math.min(n - 1, current.k < 0 ? 0 : current.k + 1)); e.preventDefault(); }
+      else if (e.key === "ArrowLeft") { showAt(Math.max(0, current.k < 0 ? n - 1 : current.k - 1)); e.preventDefault(); }
+      else if (e.key === "Escape") { hideAt(); }
+    });
+    svg.addEventListener("blur", hideAt);
+  }
+
+  /* ---------- controls ---------- */
+  var sel = $("stock"), fromEl = $("from"), toEl = $("to");
+  Object.keys(D.stocks).sort().forEach(function (name) {
+    var o = document.createElement("option"); o.value = name; o.textContent = name; sel.appendChild(o);
+  });
+  [fromEl, toEl].forEach(function (inp) { inp.min = D.start; inp.max = D.end; });
+
+  function syncControls() {
+    sel.value = state.stock; fromEl.value = state.from; toEl.value = state.to;
+    $("showBase").checked = state.showBase; $("logScale").checked = state.log;
+  }
+
+  function readControls() {
+    state.stock = sel.value;
+    state.from = fromEl.value || D.start;
+    state.to = toEl.value || D.end;
+    if (state.from > state.to) { var tmp = state.from; state.from = state.to; state.to = tmp; syncControls(); }
+    state.showBase = $("showBase").checked;
+    state.log = $("logScale").checked;
+    draw();
+  }
+
+  [sel, fromEl, toEl, $("showBase"), $("logScale")].forEach(function (c) { c.addEventListener("change", readControls); });
+
+  function applyPreset(btn) {
+    state.stock = btn.getAttribute("data-stock");
+    state.from = btn.getAttribute("data-from");
+    state.to = btn.getAttribute("data-to");
+    syncControls();
+    draw();
+    var target = $("explore");
+    if (target && !target.contains(btn)) {
+      var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      target.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("[data-preset]"), function (b) {
+    b.addEventListener("click", function () { applyPreset(b); });
+  });
+
+  /* ---------- start ---------- */
+  syncControls();
+  draw();
+  drawLambda();
+  var queued = false;
+  function onResize() {
+    if (queued) return; queued = true;
+    requestAnimationFrame(function () { queued = false; draw(); drawLambda(); });
+  }
+  window.addEventListener("resize", onResize);
+})();
+</script>
+<script>
+(function () {
+  "use strict";
+  var M = window.VOL_MODEL;
+  var $ = function (id) { return document.getElementById(id); };
+  var body = $("try-body");
+  if (!M) {
+    body.innerHTML = '<p class="notice">The model file (model.js) was not found next to this page, so the calculator is switched off. The rest of the page works without it.</p>';
+    return;
+  }
+
+  var GROUPS = [
+    { title: "Today’s move", items: [
+      { k: "log_ret", label: "Today’s return", note: "Log return: 0.01 is about 1%." },
+      { k: "ret_lag1", label: "Yesterday’s return", note: "Log return: 0.01 is about 1%." },
+      { k: "hl_range", label: "Today’s high–low range", note: "The size of the day’s price range." },
+      { k: "vol_ratio", label: "Volume versus normal", note: "Today’s volume relative to its recent level." }
+    ] },
+    { title: "Recent volatility", items: [
+      { k: "rv_5", label: "Volatility, last 5 days", note: "Daily standard deviation of returns: 0.01 is about 1% a day." },
+      { k: "rv_21", label: "Volatility, last 21 days", note: "The same measure over 21 days." },
+      { k: "rv_63", label: "Volatility, last 63 days", note: "The same measure over 63 days." }
+    ] },
+    { title: "The market", items: [
+      { k: "mkt_ret", label: "Market return today", note: "The market’s return on the day." },
+      { k: "mkt_rv_21", label: "Market volatility, last 21 days", note: "The market’s 21-day volatility." },
+      { k: "vix", label: "VIX", note: "The market volatility index level." }
+    ] }
+  ];
+  var NONNEG = { rv_5: 1, rv_21: 1, rv_63: 1, hl_range: 1, vol_ratio: 1, mkt_rv_21: 1, vix: 1 };
+  var NAMES = { log_ret: "Today’s return", abs_ret: "Size of today’s move", ret_lag1: "Yesterday’s return",
+    rv_5: "5-day volatility", rv_21: "21-day volatility", rv_63: "63-day volatility", hl_range: "High–low range",
+    vol_ratio: "Volume versus normal", mkt_ret: "Market return", mkt_rv_21: "Market volatility", vix: "VIX",
+    stock: "Which stock", weekday: "Day of the week" };
+  var DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+  var example = null;
+
+  function sig(v) { return String(Number(v.toPrecision(2))); }
+  function fv(v) { return v.toFixed(4); }
+  function fmtDate(iso) {
+    return new Date(Date.parse(iso + "T00:00:00Z")).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  }
+
+  /* ---------- the model: the same steps as the Python code ---------- */
+  function predict(stock, dow, values) {
+    var x = {}, z = {}, contrib = {}, total = M.intercept;
+    M.numeric.forEach(function (n) { x[n] = (n === "abs_ret") ? Math.abs(values.log_ret) : values[n]; });
+    Object.keys(M.clip).forEach(function (c) { x[c] = Math.min(Math.max(x[c], M.clip[c][0]), M.clip[c][1]); });
+    M.numeric.forEach(function (n) { z[n] = (x[n] - M.means[n]) / M.stds[n]; });
+    M.features.forEach(function (f, i) {
+      var v = 0, group = f;
+      if (z.hasOwnProperty(f)) { v = z[f]; }
+      else if (f.indexOf("ticker_") === 0) { v = (f === "ticker_" + stock) ? 1 : 0; group = "stock"; }
+      else if (f.indexOf("dow_") === 0) { v = (f === "dow_" + dow) ? 1 : 0; group = "weekday"; }
+      var c = M.weights[i] * v;
+      total += c;
+      contrib[group] = (contrib[group] || 0) + c;
+    });
+    return { log: total, contrib: contrib };
+  }
+
+  /* ---------- build the form ---------- */
+  var form = $("try-form"), html = "";
+  var stockOpts = M.stocks.map(function (s) { return '<option value="' + s + '">' + s + '</option>'; }).join("");
+  var dowOpts = DAYS.map(function (d, i) { return '<option value="' + i + '">' + d + '</option>'; }).join("");
+  html += '<fieldset><legend>Stock and day</legend><div class="fieldgrid">' +
+    '<div class="field"><label for="in-stock">Stock</label><select id="in-stock">' + stockOpts + '</select></div>' +
+    '<div class="field"><label for="in-dow">Day of the week</label><select id="in-dow">' + dowOpts + '</select></div>' +
+    '</div></fieldset>';
+  GROUPS.forEach(function (g) {
+    html += '<fieldset><legend>' + g.title + '</legend><div class="fieldgrid">';
+    g.items.forEach(function (it) {
+      var info = M.inputInfo[it.k];
+      var hint = it.note + " Typical " + sig(info.median) + "; most days " + sig(info.p1) + " to " + sig(info.p99) + ".";
+      html += '<div class="field" id="f-' + it.k + '"><label for="in-' + it.k + '">' + it.label + '</label>' +
+        '<input id="in-' + it.k + '" type="number" step="any" inputmode="decimal" aria-describedby="h-' + it.k + ' e-' + it.k + '">' +
+        '<span class="hint" id="h-' + it.k + '">' + hint + '</span><span class="err" id="e-' + it.k + '"></span></div>';
+    });
+    html += '</div></fieldset>';
+  });
+  form.innerHTML = html;
+  form.addEventListener("submit", function (e) { e.preventDefault(); });
+
+  var ex = $("examples"), exHtml = '<button type="button" class="preset" data-example="typical-inputs" aria-pressed="false">Reset to typical inputs</button>';
+  M.presets.forEach(function (p) {
+    exHtml += '<button type="button" class="preset" data-example="' + p.id + '" aria-pressed="false">' + p.label + '</button>';
+  });
+  ex.innerHTML = exHtml;
+
+  /* ---------- reading the inputs ---------- */
+  function readValues() {
+    var vals = {}, ok = true, outside = 0;
+    M.inputs.forEach(function (k) {
+      var f = $("f-" + k), raw = $("in-" + k).value.trim(), v = parseFloat(raw), msg = "";
+      f.classList.remove("bad"); f.classList.remove("warn");
+      if (raw === "" || isNaN(v)) { msg = "Enter a number."; ok = false; f.classList.add("bad"); }
+      else if (NONNEG[k] && v < 0) { msg = "This cannot be negative."; ok = false; f.classList.add("bad"); }
+      else {
+        var info = M.inputInfo[k];
+        if (v < info.min || v > info.max) {
+          msg = "Outside the range seen in training (" + sig(info.min) + " to " + sig(info.max) + ").";
+          f.classList.add("warn"); outside++;
+        }
+        vals[k] = v;
+      }
+      $("e-" + k).textContent = msg;
+    });
+    return { ok: ok, vals: vals, outside: outside };
+  }
+
+  function pct(c) {
+    var p = (Math.exp(c) - 1) * 100;
+    if (Math.abs(p) < 0.5) return "0%";
+    return (p > 0 ? "+" : "−") + Math.abs(p).toFixed(0) + "%";
+  }
+
+  /* ---------- showing the answer ---------- */
+  function render() {
+    var r = readValues();
+    var cov = Math.round(M.range.testCoverage * 100);
+    $("r-note").textContent = "This is the model’s best single guess, not a promise. Its typical error is about 1.6 times (0.49 on the log scale), and it misses sudden spikes and very quiet weeks (see Where it goes wrong). About " + cov + " in 100 real outcomes on the test period fell inside a range like this one.";
+    if (!r.ok) {
+      $("r-value").textContent = "–";
+      $("r-sub").textContent = "Fix the highlighted inputs to see a forecast.";
+      $("r-range").textContent = "–"; $("r-base").textContent = "–"; $("r-vs").textContent = "–";
+      $("r-contrib").innerHTML = ""; $("r-actual").hidden = true; $("r-warn").hidden = true;
+      return;
+    }
+    var stock = $("in-stock").value, dow = parseInt($("in-dow").value, 10);
+    var res = predict(stock, dow, r.vals);
+    var vol = Math.exp(res.log);
+    var lo = Math.exp(res.log + M.range.q10), hi = Math.exp(res.log + M.range.q90);
+
+    $("r-value").textContent = fv(vol);
+    $("r-sub").textContent = "Expected five-day volatility for " + stock + ". That is a typical daily move of about " + (vol / Math.sqrt(5) * 100).toFixed(1) + "%.";
+    $("r-range").textContent = fv(lo) + " to " + fv(hi);
+    $("r-base").textContent = fv(M.baseline);
+    var rel = (vol / M.baseline - 1) * 100;
+    $("r-vs").textContent = Math.abs(rel) < 0.5 ? "About the same" : Math.abs(rel).toFixed(0) + "% " + (rel > 0 ? "higher" : "lower");
+
+    var list = Object.keys(res.contrib).map(function (k) { return { k: k, c: res.contrib[k] }; });
+    list.sort(function (a, b) { return Math.abs(b.c) - Math.abs(a.c); });
+    list = list.slice(0, 5);
+    var maxc = Math.max.apply(null, list.map(function (d) { return Math.abs(d.c); })) || 1;
+    $("r-contrib").innerHTML = list.map(function (d) {
+      var w = Math.max(5, Math.abs(d.c) / maxc * 100);
+      return '<li><span>' + NAMES[d.k] + '</span><span class="cb" aria-hidden="true"><i class="' + (d.c >= 0 ? "up" : "down") + '" style="width:' + w.toFixed(0) + '%"></i></span><span class="cv">' + pct(d.c) + '</span></li>';
+    }).join("");
+
+    var warn = $("r-warn");
+    if (r.outside) { warn.hidden = false; warn.textContent = r.outside + (r.outside === 1 ? " input is" : " inputs are") + " outside the range the model was trained on, so the forecast is an extrapolation and may be unreliable."; }
+    else { warn.hidden = true; warn.textContent = ""; }
+
+    var act = $("r-actual");
+    if (example) {
+      var a = example.actual, ratio = a / vol, rel2;
+      if (ratio > 1.05) rel2 = ratio.toFixed(1) + " times the forecast";
+      else if (ratio < 0.95) rel2 = "the forecast was " + (1 / ratio).toFixed(1) + " times too high";
+      else rel2 = "close to the forecast";
+      act.hidden = false;
+      act.innerHTML = '<strong>What actually happened.</strong> On ' + fmtDate(example.date) + ', ' + example.stock + '’s five-day volatility came in at <strong>' + fv(a) + '</strong>: ' + rel2 + '. It fell ' + ((a >= lo && a <= hi) ? "inside" : "outside") + ' the likely range.';
+    } else { act.hidden = true; }
+  }
+
+  function setPressed(id) {
+    Array.prototype.forEach.call(ex.querySelectorAll("button"), function (b) {
+      b.setAttribute("aria-pressed", b.getAttribute("data-example") === id ? "true" : "false");
+    });
+  }
+
+  function setValues(stock, dow, values) {
+    $("in-stock").value = stock; $("in-dow").value = String(dow);
+    M.inputs.forEach(function (k) { $("in-" + k).value = String(values[k]); });
+  }
+
+  function typical() {
+    var v = {};
+    M.inputs.forEach(function (k) { v[k] = Number(M.inputInfo[k].median.toPrecision(3)); });
+    setValues("RELIANCE", 2, v);
+    example = null; setPressed("typical-inputs"); render();
+  }
+
+  ex.addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return;
+    var id = b.getAttribute("data-example");
+    if (id === "typical-inputs") { typical(); return; }
+    var p = M.presets.filter(function (q) { return q.id === id; })[0];
+    setValues(p.stock, p.dow, p.values);
+    example = p; setPressed(id); render();
+  });
+
+  form.addEventListener("input", function () { example = null; setPressed(""); render(); });
+  form.addEventListener("change", function () { example = null; setPressed(""); render(); });
+
+  typical();
+})();
+</script>
+</body>
+</html>

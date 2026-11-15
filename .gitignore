@@ -1,0 +1,23 @@
+# Byte-compiled / optimized / Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment
+.env
+.venv/
+venv/
+ENV/
+
+# Large datasets & raw data (per README guidelines)
+dataset.csv
+*.csv
+!results/test_predictions.csv
+
+# Archives & drafts backup
+archive/
+
+# Operating System files
+.DS_Store
+Thumbs.db
+desktop.ini
