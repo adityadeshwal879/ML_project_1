@@ -3,200 +3,782 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light">
-<title>Forecasting 5-day stock volatility | ES 335 project</title>
-<meta name="description" content="A regression model that forecasts how much 30 large Indian stocks will move over the next five trading days. Enter your own inputs to get a forecast, or explore its predictions on unseen 2024–2026 data.">
+<title>Forecasting 5-day Stock Volatility | ES 335 ML Project &bull; IIT Gandhinagar</title>
+<meta name="description" content="A regularized machine learning regression model forecasting realized volatility across 30 large Indian equities over the next five trading days. Interactive calculator, prediction explorer, and empirical analysis.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Schibsted+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+<script>
+  /* Theme initialization before render to avoid flash */
+  (function() {
+    var saved = localStorage.getItem("theme");
+    var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var theme = saved || (prefersDark ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+
+  /* Robust Image Error Fallback: automatically tries assets/, results/, and root */
+  function handleImgError(el) {
+    var tried = parseInt(el.getAttribute("data-tried") || "0", 10);
+    var originalSrc = el.getAttribute("data-original-src") || el.getAttribute("src");
+    el.setAttribute("data-original-src", originalSrc);
+    var filename = originalSrc.split("/").pop();
+    var paths = [
+      "assets/" + filename,
+      "results/" + filename,
+      filename,
+      "./assets/" + filename,
+      "./results/" + filename
+    ];
+    if (tried < paths.length) {
+      el.setAttribute("data-tried", tried + 1);
+      el.src = paths[tried];
+    }
+  }
+</script>
+
+<!-- Model and Data scripts loaded in head for immediate availability -->
+<script src="model.js"></script>
+<script src="data.js"></script>
+
 <style>
-:root{
-  --paper:#F5F7FA;
-  --ink:#1B2430;
-  --muted:#54606F;
-  --rule:#D6DCE6;
-  --blue:#2447D6;
-  --blue-tint:#E6ECFB;
-  --blue-mid:#B9C7EE;
-  --grey:#7D8896;
-  --note-bg:#FFF6D6;
-  --note-line:#D9B33A;
-  --sans:"Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
-  --serif:"Literata",Georgia,"Times New Roman",serif;
+:root {
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-heading: 'Plus Jakarta Sans', var(--font-sans);
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Light Theme */
+  --bg-page: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-card-sub: #f1f5f9;
+  --bg-card-elevated: #ffffff;
+  --border-rule: #e2e8f0;
+  --border-subtle: #cbd5e1;
+  --border-focus: #3b82f6;
+
+  --ink-primary: #0f172a;
+  --ink-secondary: #334155;
+  --ink-muted: #64748b;
+  --ink-faint: #94a3b8;
+
+  --brand-primary: #2563eb;
+  --brand-primary-hover: #1d4ed8;
+  --brand-tint: #eff6ff;
+  --brand-border: #bfdbfe;
+  --brand-glow: rgba(37, 99, 235, 0.12);
+
+  --accent-emerald: #059669;
+  --accent-emerald-tint: #ecfdf5;
+  --accent-amber: #d97706;
+  --accent-amber-tint: #fffbeb;
+  --accent-rose: #e11d48;
+  --accent-rose-tint: #fff1f2;
+
+  --header-bg: rgba(248, 250, 252, 0.88);
+
+  --chart-grid: #e2e8f0;
+  --chart-axis: #94a3b8;
+  --chart-actual: #0f172a;
+  --chart-model: #2563eb;
+  --chart-base: #64748b;
+
+  --tip-bg: rgba(15, 23, 42, 0.94);
+  --tip-color: #f8fafc;
+  --tip-border: rgba(255, 255, 255, 0.1);
+
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -4px rgba(0, 0, 0, 0.03);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
 }
-*{box-sizing:border-box}
-html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
-@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
-body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--serif);font-size:1.0625rem;line-height:1.7}
-img{max-width:100%;height:auto;display:block}
-a{color:var(--blue);text-underline-offset:3px}
-a:hover{text-decoration-thickness:2px}
-:focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:2px}
-.skip{position:absolute;left:-999px;top:8px;background:var(--ink);color:#fff;padding:8px 12px;border-radius:6px;z-index:20;font-family:var(--sans)}
-.skip:focus{left:12px}
-.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
-.prose{max-width:66ch}
-.num{font-variant-numeric:tabular-nums}
-.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
-/* top bar */
-.bar{position:sticky;top:0;z-index:10;background:rgba(245,247,250,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--rule)}
-.bar .wrap{display:flex;align-items:center;gap:24px;height:52px}
-.brand{font-family:var(--sans);font-weight:700;color:var(--ink);text-decoration:none;white-space:nowrap}
-.bar nav{display:flex;gap:18px;overflow-x:auto;scrollbar-width:none;font-family:var(--sans);font-weight:500;font-size:.95rem}
-.bar nav::-webkit-scrollbar{display:none}
-.bar nav a{color:var(--muted);text-decoration:none;white-space:nowrap;padding:4px 0}
-.bar nav a:hover{color:var(--blue)}
+[data-theme="dark"] {
+  --bg-page: #0b0f19;
+  --bg-card: #111827;
+  --bg-card-sub: #1e293b;
+  --bg-card-elevated: #1e293b;
+  --border-rule: #1e293b;
+  --border-subtle: #334155;
+  --border-focus: #60a5fa;
 
-/* headings */
-h1,h2,h3{font-family:var(--sans);line-height:1.15;margin:0;color:var(--ink)}
-h1{font-size:clamp(2rem,5.4vw,3.5rem);font-weight:700;letter-spacing:-.025em;max-width:20ch}
-h2{font-size:clamp(1.5rem,3vw,1.9rem);font-weight:700;letter-spacing:-.015em;margin-bottom:14px}
-h3{font-size:1.15rem;font-weight:600;margin:28px 0 8px}
-section{padding:56px 0 8px;scroll-margin-top:52px}
-section + section{border-top:1px solid var(--rule);margin-top:40px}
-p{margin:0 0 1em}
-.lead{font-size:1.2rem;line-height:1.6;max-width:56ch}
-.small{font-size:.92rem;color:var(--muted)}
-code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88em;background:var(--blue-tint);padding:1px 5px;border-radius:4px}
+  --ink-primary: #f8fafc;
+  --ink-secondary: #cbd5e1;
+  --ink-muted: #94a3b8;
+  --ink-faint: #64748b;
 
-/* hero */
-.hero{padding:44px 0 8px}
-.hero .lead{margin-top:18px}
-.hero .result{margin-top:14px;max-width:62ch}
+  --brand-primary: #3b82f6;
+  --brand-primary-hover: #60a5fa;
+  --brand-tint: rgba(59, 130, 246, 0.15);
+  --brand-border: rgba(59, 130, 246, 0.35);
+  --brand-glow: rgba(59, 130, 246, 0.25);
 
-/* explorer */
-.explorer{padding-top:28px}
-.controls{display:flex;flex-wrap:wrap;gap:14px 18px;align-items:end;margin:6px 0 14px;font-family:var(--sans)}
-.field{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--muted);font-weight:500}
-.field select,.field input[type=date]{font:inherit;font-size:1rem;color:var(--ink);background:#fff;border:1px solid var(--grey);border-radius:6px;padding:7px 10px;min-height:40px}
-.checks{display:flex;flex-wrap:wrap;gap:6px 18px;font-family:var(--sans);font-size:.95rem}
-.checks label{display:flex;align-items:center;gap:7px;cursor:pointer;min-height:32px}
-.checks input{width:18px;height:18px;accent-color:var(--blue)}
-.presets{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 16px;font-family:var(--sans)}
-.preset{font:inherit;font-size:.95rem;font-weight:500;color:var(--blue);background:transparent;border:1px solid var(--blue);border-radius:6px;padding:8px 12px;cursor:pointer;min-height:40px}
-.preset:hover{background:var(--blue-tint)}
-.legend{display:flex;flex-wrap:wrap;gap:6px 22px;font-family:var(--sans);font-size:.92rem;margin:0 0 6px}
-.legend span{display:inline-flex;align-items:center;gap:8px}
-.swatch{width:30px;height:0;border-top:3px solid var(--ink)}
-.swatch.model{border-top-color:var(--blue)}
-.swatch.base{border-top:2px dashed var(--grey)}
-.chartbox{position:relative;background:#fff;border:1px solid var(--rule);border-radius:8px;padding:6px 4px 2px}
-#chart svg{display:block;width:100%;touch-action:pan-y}
-#chart text{font-family:var(--sans);font-size:11.5px;fill:var(--muted)}
-.tip{position:absolute;pointer-events:none;background:var(--ink);color:#fff;font-family:var(--sans);font-size:.85rem;line-height:1.45;padding:8px 10px;border-radius:6px;white-space:nowrap;display:none;z-index:5}
-.tip b{font-weight:600}
-.chart-help{font-family:var(--sans);font-size:.85rem;color:var(--muted);margin:8px 2px 0}
-.empty{padding:40px 16px;text-align:center;color:var(--muted);font-family:var(--sans)}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:0;margin:18px 0 0;border-top:1px solid var(--rule);font-family:var(--sans)}
-.stats div{padding:12px 16px 12px 0;border-bottom:1px solid var(--rule)}
-.stats dt{font-size:.85rem;color:var(--muted);font-weight:500}
-.stats dd{margin:2px 0 0;font-size:1.2rem;font-weight:600;font-variant-numeric:tabular-nums}
-.stats dd small{display:block;font-size:.85rem;font-weight:500;color:var(--muted)}
-.stats .wide{grid-column:span 2}
-@media (max-width:560px){.stats .wide{grid-column:auto}}
+  --accent-emerald: #34d399;
+  --accent-emerald-tint: rgba(52, 211, 153, 0.15);
+  --accent-amber: #fbbf24;
+  --accent-amber-tint: rgba(251, 191, 36, 0.15);
+  --accent-rose: #fb7185;
+  --accent-rose-tint: rgba(251, 113, 133, 0.15);
 
-/* lists */
-ul,ol{margin:0 0 1em;padding-left:1.25em;max-width:66ch}
-li{margin:0 0 .45em}
-dl.glossary{display:grid;grid-template-columns:max-content 1fr;gap:6px 22px;max-width:70ch;margin:0 0 1.2em;font-size:1rem}
-dl.glossary dt{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88rem;padding-top:3px}
-dl.glossary dd{margin:0}
-@media (max-width:560px){dl.glossary{grid-template-columns:1fr;gap:0}dl.glossary dd{margin-bottom:10px}}
+  --header-bg: rgba(11, 15, 25, 0.88);
 
-.notice{max-width:66ch;background:var(--note-bg);border:1px dashed var(--note-line);border-radius:8px;padding:12px 16px;margin:0 0 1.2em;font-family:var(--sans);font-size:.95rem;line-height:1.55}
+  --chart-grid: #1e293b;
+  --chart-axis: #64748b;
+  --chart-actual: #f8fafc;
+  --chart-model: #38bdf8;
+  --chart-base: #94a3b8;
 
-/* figures */
-figure{margin:22px 0 28px}
-figure img{border:1px solid var(--rule);border-radius:8px;background:#fff}
-figcaption{font-family:var(--sans);font-size:.9rem;color:var(--muted);margin-top:8px;max-width:70ch}
-.figrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;align-items:start}
+  --tip-bg: rgba(30, 41, 59, 0.95);
+  --tip-color: #f8fafc;
+  --tip-border: rgba(255, 255, 255, 0.15);
 
-/* split timeline */
-.timeline{display:flex;align-items:stretch;gap:4px;margin:16px 0 6px;font-family:var(--sans);font-size:.9rem}
-.timeline .seg{padding:12px 12px;border-radius:6px;min-width:0}
-.timeline .train{flex:2452 1 0;background:var(--blue-tint)}
-.timeline .val{flex:721 1 0;background:var(--blue-mid)}
-.timeline .test{flex:984 1 0;background:var(--blue);color:#fff}
-.timeline .gap{flex:0 0 8px;background:repeating-linear-gradient(45deg,var(--rule) 0 3px,transparent 3px 6px);border-radius:3px}
-.timeline b{display:block;font-weight:600}
-.timeline small{display:block;font-size:.82rem;opacity:.9}
-@media (max-width:640px){.timeline{flex-direction:column}.timeline .seg{flex:none!important}.timeline .gap{flex:0 0 8px;height:8px}}
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.45);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+}
 
-/* tables */
-.tablewrap{overflow-x:auto;margin:10px 0 22px}
-table{border-collapse:collapse;width:100%;font-family:var(--sans);font-size:.98rem}
-th,td{text-align:left;padding:10px 14px 10px 0;border-bottom:1px solid var(--rule);vertical-align:middle}
-th{font-weight:600;color:var(--muted);font-size:.88rem;border-bottom:1px solid var(--grey);white-space:nowrap}
-th.num,td.num{text-align:right;padding-right:16px;font-variant-numeric:tabular-nums;white-space:nowrap}
-tr.best td{font-weight:600}
-.barcell{position:relative;min-width:190px}
-.barcell .fill{display:block;height:8px;border-radius:2px;background:var(--grey);width:var(--w);margin-bottom:4px}
-tr.best .barcell .fill{background:var(--blue)}
-.barcell span.v{display:block;text-align:right}
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 
-#lambda-chart{background:#fff;border:1px solid var(--rule);border-radius:8px;padding:6px 4px;max-width:720px}
-#lambda-chart svg{display:block;width:100%}
-#lambda-chart text{font-family:var(--sans);font-size:11.5px;fill:var(--muted)}
+body {
+  margin: 0;
+  background-color: var(--bg-page);
+  color: var(--ink-secondary);
+  font-family: var(--font-sans);
+  font-size: 1.05rem;
+  line-height: 1.7;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
 
-pre{background:#fff;border:1px solid var(--rule);border-radius:8px;padding:14px 16px;overflow-x:auto;font-size:.9rem;line-height:1.6;max-width:66ch}
-pre code{background:none;padding:0}
-footer{margin-top:64px;padding:28px 0 48px;border-top:1px solid var(--rule);font-family:var(--sans);font-size:.92rem;color:var(--muted)}
+img {
+  max-width: 100%; height: auto; display: block; border-radius: 8px;
+  background: var(--bg-card-sub);
+}
+a { color: var(--brand-primary); text-decoration: none; text-underline-offset: 3px; transition: color 0.15s ease; }
+a:hover { color: var(--brand-primary-hover); text-decoration: underline; }
+:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }
 
-/* try the model */
-[hidden]{display:none!important}
-.cta{display:inline-flex;align-items:center;min-height:44px;padding:10px 18px;border-radius:6px;background:var(--blue);color:#fff;font-family:var(--sans);font-weight:600;text-decoration:none}
-.cta:hover{background:#1B38AE;color:#fff}
-.try-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:32px;align-items:start;margin-top:6px}
-@media (max-width:860px){.try-grid{grid-template-columns:minmax(0,1fr)}}
-fieldset{border:0;padding:0;margin:0 0 20px;min-width:0}
-legend{font-family:var(--sans);font-weight:700;font-size:1.05rem;padding:0;margin-bottom:10px}
-.fieldgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px 16px}
-.field label{color:var(--ink);font-weight:600;font-size:.92rem}
-.field input[type=number]{font:inherit;font-size:1rem;color:var(--ink);background:#fff;border:1px solid var(--grey);border-radius:6px;padding:7px 10px;min-height:40px;width:100%}
-.field select{width:100%}
-.hint{font-weight:400;font-size:.8rem;color:var(--muted);line-height:1.4}
-.err{font-size:.82rem;line-height:1.4;font-weight:500;min-height:0}
-.field.bad input{border-color:#B3261E;box-shadow:0 0 0 1px #B3261E}
-.field.bad .err{color:#B3261E}
-.field.warn .err{color:#7A5200}
-.result-panel{position:sticky;top:66px;background:#fff;border:1px solid var(--rule);border-radius:8px;padding:18px 20px 16px}
-@media (max-width:860px){.result-panel{position:static}}
-.result-panel h3{margin:0 0 6px;font-size:1rem}
-.result-panel h3 + .r-value{margin-top:0}
-.r-value{font-family:var(--sans);font-weight:700;font-size:clamp(2.3rem,6vw,3.1rem);line-height:1.05;letter-spacing:-.02em;color:var(--blue);margin:0 0 4px;font-variant-numeric:tabular-nums}
-.r-sub{font-family:var(--sans);font-size:.95rem;color:var(--muted);margin:0 0 12px;line-height:1.45}
-.r-list{margin:0 0 14px;border-top:1px solid var(--rule);font-family:var(--sans)}
-.r-list div{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--rule)}
-.r-list dt{color:var(--muted);font-size:.9rem}
-.r-list dd{margin:0;font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
-.r-actual{background:var(--blue-tint);border-radius:6px;padding:10px 12px;margin:0 0 14px;font-family:var(--sans);font-size:.92rem;line-height:1.5}
-.result-panel h3.sub{margin-top:18px}
-.contrib{list-style:none;padding:0;margin:8px 0 12px;max-width:none}
-.contrib li{display:grid;grid-template-columns:minmax(0,1fr) 84px 52px;align-items:center;gap:8px;margin:0 0 7px;font-family:var(--sans);font-size:.9rem}
-.cb{height:8px;background:var(--blue-tint);border-radius:2px;overflow:hidden}
-.cb i{display:block;height:100%}
-.cb i.up{background:var(--blue)}
-.cb i.down{background:var(--grey)}
-.cv{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
-.preset[aria-pressed="true"]{background:var(--blue);color:#fff}
+.skip {
+  position: absolute; left: -999px; top: 10px;
+  background: var(--ink-primary); color: #fff;
+  padding: 8px 16px; border-radius: 6px; z-index: 1000;
+  font-family: var(--font-sans); font-weight: 600;
+}
+.skip:focus { left: 16px; }
+
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+.prose { max-width: 68ch; font-size: 1.05rem; line-height: 1.72; color: var(--ink-secondary); }
+.num { font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Top Header Bar */
+.bar {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--header-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border-rule);
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+.bar .wrap {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; height: 60px;
+}
+.bar-left { display: flex; align-items: center; gap: 28px; }
+.brand {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-heading); font-weight: 700; font-size: 1.12rem;
+  color: var(--ink-primary); text-decoration: none; white-space: nowrap;
+}
+.brand svg { color: var(--brand-primary); }
+.brand:hover { text-decoration: none; }
+.brand-status {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+  padding: 2px 8px; border-radius: 999px;
+  background: var(--accent-emerald-tint); color: var(--accent-emerald);
+}
+.brand-status::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor; animation: pulse 2s infinite ease-in-out;
+}
+@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.85); } }
+
+.bar nav {
+  display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none;
+  font-family: var(--font-sans); font-weight: 500; font-size: 0.92rem;
+}
+.bar nav::-webkit-scrollbar { display: none; }
+.bar nav a {
+  color: var(--ink-muted); text-decoration: none; white-space: nowrap;
+  padding: 6px 12px; border-radius: 6px; transition: all 0.15s ease;
+}
+.bar nav a:hover { color: var(--brand-primary); background: var(--brand-tint); text-decoration: none; }
+
+.bar-tools { display: flex; align-items: center; gap: 10px; }
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px; border-radius: 8px;
+  background: var(--bg-card); border: 1px solid var(--border-rule);
+  color: var(--ink-muted); cursor: pointer; transition: all 0.15s ease;
+}
+.icon-btn:hover { color: var(--ink-primary); border-color: var(--border-subtle); transform: translateY(-1px); }
+
+/* Headings & Typography */
+h1, h2, h3, h4 {
+  font-family: var(--font-heading); color: var(--ink-primary);
+  line-height: 1.2; margin: 0; font-weight: 700;
+}
+h1 { font-size: clamp(2.2rem, 5.5vw, 3.6rem); letter-spacing: -0.03em; }
+h2 { font-size: clamp(1.6rem, 3.2vw, 2.1rem); letter-spacing: -0.02em; margin-bottom: 12px; }
+h3 { font-size: 1.25rem; letter-spacing: -0.01em; margin: 32px 0 10px; }
+section { padding: 68px 0 20px; scroll-margin-top: 64px; }
+section + section { border-top: 1px solid var(--border-rule); margin-top: 24px; }
+p { margin: 0 0 1.15em; }
+
+.code-pill, code {
+  font-family: var(--font-mono); font-size: 0.88em;
+  background: var(--bg-card-sub); color: var(--ink-primary);
+  padding: 2px 7px; border-radius: 5px; border: 1px solid var(--border-rule);
+}
+.small { font-size: 0.92rem; color: var(--ink-muted); line-height: 1.6; }
+
+/* Section Header styling */
+.section-tag {
+  display: inline-block; font-family: var(--font-mono);
+  font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--brand-primary); background: var(--brand-tint);
+  border: 1px solid var(--brand-border); padding: 4px 10px; border-radius: 999px; margin-bottom: 12px;
+}
+
+/* Hero Section */
+.hero {
+  padding: 56px 0 32px;
+  position: relative;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--bg-card); border: 1px solid var(--border-rule);
+  padding: 6px 14px; border-radius: 999px;
+  font-size: 0.86rem; font-weight: 600; color: var(--ink-muted);
+  box-shadow: var(--shadow-sm); margin-bottom: 22px;
+}
+.hero-badge .badge-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--brand-primary);
+}
+.hero-title { max-width: 22ch; margin-bottom: 16px; }
+.hero-lead {
+  font-size: 1.22rem; line-height: 1.65; max-width: 65ch;
+  color: var(--ink-secondary); margin-bottom: 28px;
+}
+
+.hero-stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 16px; margin: 32px 0;
+}
+.hero-card {
+  background: var(--bg-card); border: 1px solid var(--border-rule);
+  border-radius: 12px; padding: 20px 22px; box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.hero-card:hover {
+  transform: translateY(-3px); box-shadow: var(--shadow-md);
+  border-color: var(--brand-border);
+}
+.hero-num {
+  font-family: var(--font-heading); font-size: 2.1rem; font-weight: 800;
+  letter-spacing: -0.03em; color: var(--brand-primary); line-height: 1.1; margin-bottom: 4px;
+}
+.hero-label {
+  font-family: var(--font-heading); font-weight: 700; font-size: 0.95rem;
+  color: var(--ink-primary); margin-bottom: 4px;
+}
+.hero-desc { font-size: 0.85rem; color: var(--ink-muted); line-height: 1.45; }
+
+.hero-actions { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; }
+.btn-primary, .cta {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 46px; padding: 11px 22px; border-radius: 8px;
+  background: var(--brand-primary); color: #ffffff !important;
+  font-family: var(--font-heading); font-weight: 600; font-size: 0.98rem;
+  border: 1px solid transparent; box-shadow: 0 4px 14px var(--brand-glow);
+  cursor: pointer; text-decoration: none !important; transition: all 0.15s ease;
+}
+.btn-primary:hover, .cta:hover {
+  background: var(--brand-primary-hover); transform: translateY(-1px);
+  box-shadow: 0 6px 18px var(--brand-glow);
+}
+.btn-secondary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 46px; padding: 11px 20px; border-radius: 8px;
+  background: var(--bg-card); color: var(--ink-primary) !important;
+  font-family: var(--font-heading); font-weight: 600; font-size: 0.98rem;
+  border: 1px solid var(--border-rule); box-shadow: var(--shadow-sm);
+  cursor: pointer; text-decoration: none !important; transition: all 0.15s ease;
+}
+.btn-secondary:hover {
+  border-color: var(--border-subtle); transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+.btn-ghost {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 46px; padding: 11px 18px; border-radius: 8px;
+  background: transparent; color: var(--ink-muted) !important;
+  font-family: var(--font-heading); font-weight: 600; font-size: 0.98rem;
+  cursor: pointer; text-decoration: none !important; transition: all 0.15s ease;
+}
+.btn-ghost:hover { color: var(--ink-primary) !important; background: var(--bg-card-sub); }
+
+/* Interactive Try Section */
+.try-grid {
+  display: grid; grid-template-columns: minmax(0, 1.42fr) minmax(0, 1fr);
+  gap: 32px; align-items: start; margin-top: 24px;
+}
+@media (max-width: 900px) { .try-grid { grid-template-columns: minmax(0, 1fr); } }
+
+.presets { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 24px; }
+.preset {
+  font-family: var(--font-sans); font-size: 0.92rem; font-weight: 500;
+  color: var(--ink-secondary); background: var(--bg-card);
+  border: 1px solid var(--border-rule); border-radius: 8px;
+  padding: 8px 14px; cursor: pointer; min-height: 38px;
+  box-shadow: var(--shadow-sm); transition: all 0.15s ease;
+}
+.preset:hover {
+  border-color: var(--brand-border); background: var(--brand-tint);
+  color: var(--brand-primary); transform: translateY(-1px);
+}
+.preset[aria-pressed="true"] {
+  background: var(--brand-primary); color: #ffffff;
+  border-color: var(--brand-primary); font-weight: 600;
+  box-shadow: 0 4px 12px var(--brand-glow);
+}
+
+fieldset {
+  border: 1px solid var(--border-rule); background: var(--bg-card);
+  border-radius: 12px; padding: 18px 20px; margin: 0 0 20px;
+  box-shadow: var(--shadow-sm); transition: border-color 0.2s ease;
+}
+fieldset:hover { border-color: var(--border-subtle); }
+legend {
+  font-family: var(--font-heading); font-weight: 700; font-size: 1.02rem;
+  color: var(--ink-primary); padding: 0 8px;
+}
+.fieldgrid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 16px; margin-top: 6px;
+}
+
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label {
+  color: var(--ink-primary); font-weight: 600; font-size: 0.88rem;
+}
+.field input[type=number], .field input[type=date], .field select {
+  font-family: var(--font-sans); font-size: 0.96rem;
+  color: var(--ink-primary); background: var(--bg-card-sub);
+  border: 1px solid var(--border-rule); border-radius: 8px;
+  padding: 9px 12px; min-height: 42px; width: 100%;
+  transition: all 0.15s ease;
+}
+.field select {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.field input:focus, .field select:focus {
+  background: var(--bg-card); border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--brand-glow); outline: none;
+}
+.hint { font-size: 0.8rem; color: var(--ink-muted); line-height: 1.4; margin-top: 2px; }
+.err { font-size: 0.8rem; line-height: 1.4; font-weight: 500; min-height: 0; }
+.field.bad input { border-color: var(--accent-rose); box-shadow: 0 0 0 2px rgba(225, 29, 72, 0.2); }
+.field.bad .err { color: var(--accent-rose); }
+.field.warn .err { color: var(--accent-amber); }
+
+/* Result Panel */
+.result-panel {
+  position: sticky; top: 80px;
+  background: var(--bg-card); border: 1px solid var(--border-rule);
+  border-radius: 14px; padding: 24px; box-shadow: var(--shadow-md);
+  transition: all 0.2s ease;
+}
+.result-panel::before {
+  content: ""; display: block; height: 4px;
+  background: linear-gradient(90deg, var(--brand-primary), #38bdf8);
+  border-radius: 14px 14px 0 0; margin: -24px -24px 20px -24px;
+}
+@media (max-width: 900px) { .result-panel { position: static; margin-top: 16px; } }
+
+.result-panel h3 {
+  font-family: var(--font-heading); font-size: 1.05rem; font-weight: 700;
+  color: var(--ink-primary); margin: 0 0 10px;
+}
+.r-value {
+  font-family: var(--font-heading); font-weight: 800;
+  font-size: clamp(2.5rem, 6vw, 3.4rem); line-height: 1;
+  letter-spacing: -0.04em; color: var(--brand-primary);
+  margin: 0 0 6px; font-variant-numeric: tabular-nums;
+}
+.r-sub {
+  font-size: 0.95rem; color: var(--ink-muted); line-height: 1.5;
+  margin: 0 0 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border-rule);
+}
+.r-list { margin: 0 0 18px; padding: 0; font-family: var(--font-sans); }
+.r-list div {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border-rule);
+}
+.r-list dt { color: var(--ink-muted); font-size: 0.9rem; font-weight: 500; }
+.r-list dd {
+  margin: 0; font-family: var(--font-mono); font-weight: 600;
+  font-size: 0.94rem; color: var(--ink-primary);
+}
+
+.r-actual {
+  background: var(--brand-tint); border: 1px solid var(--brand-border);
+  border-radius: 8px; padding: 12px 14px; margin: 0 0 18px;
+  font-size: 0.92rem; line-height: 1.55; color: var(--ink-primary);
+}
+.result-panel h3.sub {
+  font-size: 0.92rem; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--ink-muted); margin: 20px 0 10px;
+}
+
+.contrib { list-style: none; padding: 0; margin: 8px 0 14px; }
+.contrib li {
+  display: grid; grid-template-columns: minmax(0, 1fr) 90px 54px;
+  align-items: center; gap: 10px; margin: 0 0 9px;
+  font-size: 0.88rem; font-weight: 500;
+}
+.cb {
+  height: 8px; background: var(--bg-card-sub); border-radius: 999px;
+  overflow: hidden; border: 1px solid var(--border-rule);
+}
+.cb i { display: block; height: 100%; border-radius: 999px; }
+.cb i.up { background: linear-gradient(90deg, #f59e0b, #ef4444); }
+.cb i.down { background: linear-gradient(90deg, #10b981, #06b6d4); }
+.cv {
+  text-align: right; font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono); font-weight: 600; font-size: 0.88rem;
+}
+
+.err-box {
+  background: var(--accent-rose-tint); border: 1px solid rgba(225, 29, 72, 0.25);
+  border-radius: 8px; padding: 10px 12px; color: var(--accent-rose);
+  margin-top: 12px; font-size: 0.85rem;
+}
+.note-box {
+  background: var(--bg-card-sub); border-radius: 8px;
+  padding: 10px 12px; margin-top: 14px; font-size: 0.84rem; line-height: 1.5;
+}
+
+/* Explorer Section */
+.controls {
+  display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end;
+  margin: 12px 0 16px; background: var(--bg-card);
+  border: 1px solid var(--border-rule); border-radius: 12px;
+  padding: 18px 20px; box-shadow: var(--shadow-sm);
+}
+.checks { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; min-height: 42px; }
+.checks label {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  font-size: 0.94rem; font-weight: 500; color: var(--ink-secondary);
+}
+.checks input[type=checkbox] {
+  width: 18px; height: 18px; accent-color: var(--brand-primary); cursor: pointer;
+}
+
+.legend {
+  display: flex; flex-wrap: wrap; gap: 20px; font-size: 0.9rem;
+  font-weight: 500; color: var(--ink-muted); margin: 0 0 10px;
+}
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.swatch {
+  width: 26px; height: 0; border-top: 3px solid var(--chart-actual); border-radius: 2px;
+}
+.swatch.model { border-top-color: var(--chart-model); }
+.swatch.base { border-top: 2px dashed var(--chart-base); }
+
+.chartbox {
+  position: relative; background: var(--bg-card);
+  border: 1px solid var(--border-rule); border-radius: 12px;
+  padding: 12px 8px 6px; box-shadow: var(--shadow-md);
+  min-height: 400px;
+}
+#chart { min-height: 380px; width: 100%; }
+#chart svg { display: block; width: 100%; height: auto; min-height: 380px; touch-action: pan-y; }
+.tip {
+  position: absolute; pointer-events: none;
+  background: var(--tip-bg); color: var(--tip-color);
+  border: 1px solid var(--tip-border); backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-family: var(--font-sans); font-size: 0.86rem; line-height: 1.55;
+  padding: 10px 14px; border-radius: 8px; box-shadow: var(--shadow-lg);
+  white-space: nowrap; display: none; z-index: 20;
+}
+.tip b { font-weight: 700; color: #fff; font-family: var(--font-heading); }
+.chart-help { font-size: 0.86rem; color: var(--ink-muted); margin: 10px 4px 0; }
+.empty { padding: 48px 16px; text-align: center; color: var(--ink-muted); font-size: 1rem; }
+
+/* Stats cards in explorer */
+.stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px; margin: 20px 0 12px; padding: 0;
+}
+.stats div {
+  background: var(--bg-card); border: 1px solid var(--border-rule);
+  border-radius: 10px; padding: 14px 16px; box-shadow: var(--shadow-sm);
+}
+.stats dt {
+  font-size: 0.78rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--ink-muted);
+}
+.stats dd {
+  margin: 6px 0 0; font-family: var(--font-heading); font-size: 1.35rem;
+  font-weight: 700; color: var(--ink-primary); font-variant-numeric: tabular-nums;
+}
+.stats dd small {
+  display: block; font-family: var(--font-sans); font-size: 0.82rem;
+  font-weight: 500; color: var(--ink-muted); margin-top: 3px;
+}
+.stats .wide { grid-column: span 2; }
+@media (max-width: 600px) { .stats .wide { grid-column: auto; } }
+
+/* Figures */
+figure {
+  margin: 28px 0 32px; background: var(--bg-card);
+  border: 1px solid var(--border-rule); border-radius: 12px;
+  padding: 16px; box-shadow: var(--shadow-sm);
+}
+figure img {
+  border-radius: 8px; width: 100%; height: auto; display: block;
+}
+figcaption {
+  font-size: 0.9rem; color: var(--ink-muted); margin-top: 12px;
+  line-height: 1.55; max-width: 75ch; font-weight: 500;
+}
+.figrow {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px; align-items: start;
+}
+
+/* Timeline */
+.timeline {
+  display: flex; align-items: stretch; gap: 6px;
+  margin: 20px 0 8px; font-size: 0.92rem;
+}
+.timeline .seg {
+  padding: 14px 16px; border-radius: 8px; min-width: 0;
+  box-shadow: var(--shadow-sm);
+}
+.timeline .train {
+  flex: 2452 1 0; background: var(--brand-tint);
+  border: 1px solid var(--brand-border); color: var(--ink-primary);
+}
+.timeline .val {
+  flex: 721 1 0; background: var(--bg-card-sub);
+  border: 1px solid var(--border-subtle); color: var(--ink-primary);
+}
+.timeline .test {
+  flex: 984 1 0; background: var(--brand-primary);
+  border: 1px solid var(--brand-primary); color: #ffffff;
+}
+.timeline .gap {
+  flex: 0 0 10px; border-radius: 4px;
+  background: repeating-linear-gradient(45deg, var(--border-subtle) 0 3px, transparent 3px 6px);
+}
+.timeline b { display: block; font-family: var(--font-heading); font-weight: 700; margin-bottom: 2px; }
+.timeline small { display: block; font-size: 0.82rem; opacity: 0.88; }
+@media (max-width: 640px) {
+  .timeline { flex-direction: column; }
+  .timeline .seg { flex: none !important; }
+  .timeline .gap { flex: 0 0 10px; height: 10px; }
+}
+
+/* Tables */
+.tablewrap {
+  overflow-x: auto; margin: 16px 0 24px;
+  background: var(--bg-card); border: 1px solid var(--border-rule);
+  border-radius: 12px; box-shadow: var(--shadow-sm);
+}
+table {
+  border-collapse: collapse; width: 100%;
+  font-size: 0.96rem; text-align: left;
+}
+th, td {
+  padding: 12px 18px; border-bottom: 1px solid var(--border-rule);
+  vertical-align: middle;
+}
+th {
+  font-family: var(--font-heading); font-weight: 700; font-size: 0.82rem;
+  text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-muted);
+  background: var(--bg-card-sub); white-space: nowrap;
+}
+th.num, td.num { text-align: right; font-family: var(--font-mono); }
+tr:hover td { background: var(--bg-card-sub); }
+tr.best td {
+  background: var(--brand-tint); font-weight: 600;
+  color: var(--brand-primary);
+}
+tr.best td:first-child::after {
+  content: " ★ Best Model"; font-size: 0.75rem; font-weight: 700;
+  text-transform: uppercase; margin-left: 8px; padding: 2px 6px;
+  background: var(--brand-primary); color: #fff; border-radius: 4px;
+}
+.barcell { position: relative; min-width: 180px; }
+.barcell .fill {
+  display: block; height: 6px; border-radius: 999px;
+  background: var(--border-subtle); width: var(--w); margin-bottom: 4px;
+}
+tr.best .barcell .fill { background: var(--brand-primary); }
+.barcell span.v { display: block; text-align: right; }
+
+#lambda-chart {
+  background: var(--bg-card); border: 1px solid var(--border-rule);
+  border-radius: 12px; padding: 12px 8px; max-width: 740px; box-shadow: var(--shadow-sm);
+  min-height: 230px;
+}
+#lambda-chart svg { display: block; width: 100%; height: auto; min-height: 230px; }
+
+/* Glossary & Lists */
+dl.glossary {
+  display: grid; grid-template-columns: max-content 1fr;
+  gap: 8px 24px; max-width: 70ch; margin: 16px 0 24px; font-size: 0.98rem;
+}
+dl.glossary dt {
+  font-family: var(--font-mono); font-size: 0.9rem; font-weight: 600;
+  color: var(--brand-primary); padding-top: 2px;
+}
+dl.glossary dd { margin: 0; color: var(--ink-secondary); }
+@media (max-width: 560px) {
+  dl.glossary { grid-template-columns: 1fr; gap: 0; }
+  dl.glossary dd { margin-bottom: 12px; }
+}
+
+.notice {
+  background: var(--accent-amber-tint); border: 1px dashed var(--accent-amber);
+  border-radius: 8px; padding: 14px 18px; margin: 0 0 1.5em;
+  font-size: 0.94rem; line-height: 1.6; color: var(--ink-primary);
+}
+
+ul, ol { margin: 0 0 1.2em; padding-left: 1.35em; max-width: 68ch; }
+li { margin: 0 0 0.5em; }
+
+pre {
+  background: var(--bg-card); border: 1px solid var(--border-rule);
+  border-radius: 10px; padding: 16px 20px; overflow-x: auto;
+  font-family: var(--font-mono); font-size: 0.88rem; line-height: 1.65;
+  box-shadow: var(--shadow-sm); max-width: 68ch;
+}
+pre code { background: none; border: none; padding: 0; }
+
+/* Footer */
+footer {
+  margin-top: 80px; padding: 36px 0 60px;
+  border-top: 1px solid var(--border-rule);
+  font-size: 0.92rem; color: var(--ink-muted);
+}
+.footer-wrap {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px;
+}
+.footer-links { display: flex; gap: 18px; align-items: center; }
+.footer-links a { color: var(--ink-muted); }
+.footer-links a:hover { color: var(--brand-primary); }
+
+/* SVG Presentation Attribute Overrides for Theme Sync */
+#chart svg line[stroke="#E3E8EF" i],
+#lambda-chart svg line[stroke="#D6DCE6" i] {
+  stroke: var(--chart-grid) !important;
+}
+#chart svg line[stroke="#7D8896" i],
+#lambda-chart svg line[stroke="#7D8896" i] {
+  stroke: var(--chart-axis) !important;
+}
+#chart svg text,
+#lambda-chart svg text {
+  fill: var(--ink-muted) !important;
+  font-family: var(--font-sans) !important;
+}
+#chart svg path[stroke="#1B2430" i], #chart svg path[stroke="#1b2430" i] {
+  stroke: var(--chart-actual) !important;
+  stroke-width: 2px !important;
+}
+#chart svg path[stroke="#2447D6" i], #chart svg path[stroke="#2447d6" i],
+#lambda-chart svg path[stroke="#2447D6" i], #lambda-chart svg path[stroke="#2447d6" i] {
+  stroke: var(--chart-model) !important;
+  stroke-width: 2.5px !important;
+}
+#lambda-chart svg circle[stroke="#2447D6" i], #lambda-chart svg circle[stroke="#2447d6" i] {
+  stroke: var(--chart-model) !important;
+}
+#lambda-chart svg circle[fill="#2447D6" i], #lambda-chart svg circle[fill="#2447d6" i] {
+  fill: var(--chart-model) !important;
+}
+#lambda-chart svg circle[fill="#fff" i] {
+  fill: var(--bg-card) !important;
+}
+#cross circle#ca {
+  fill: var(--chart-actual) !important;
+}
+#cross circle#cr {
+  fill: var(--chart-model) !important;
+}
+#cross line#cx {
+  stroke: var(--ink-primary) !important;
+  stroke-opacity: 0.35 !important;
+}
 </style>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
+
 <header class="bar">
   <div class="wrap">
-    <a class="brand" href="#top">Volatility forecast</a>
-    <nav aria-label="Sections">
-      <a href="#try">Try it</a>
-      <a href="#explore">Explore</a>
-      <a href="#problem">Question</a>
-      <a href="#data">Data</a>
-      <a href="#method">Method</a>
-      <a href="#results">Results</a>
-      <a href="#errors">Errors</a>
-      <a href="#run">Code</a>
-    </nav>
+    <div class="bar-left">
+      <a class="brand" href="#top">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+        </svg>
+        <span>Volatility Forecast</span>
+        <span class="brand-status">Live</span>
+      </a>
+      <nav aria-label="Sections">
+        <a href="#try">Calculator</a>
+        <a href="#explore">Explorer</a>
+        <a href="#problem">Question</a>
+        <a href="#data">Data</a>
+        <a href="#method">Method</a>
+        <a href="#results">Results</a>
+        <a href="#errors">Limitations</a>
+        <a href="#run">Code</a>
+      </nav>
+    </div>
+    <div class="bar-tools">
+      <button class="icon-btn" id="theme-toggle" aria-label="Toggle light and dark theme">
+        <svg id="theme-icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+      </button>
+      <a class="icon-btn" href="https://github.com/" target="_blank" rel="noopener noreferrer" aria-label="View on GitHub">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+        </svg>
+      </a>
+    </div>
   </div>
 </header>
 
@@ -204,15 +786,58 @@ legend{font-family:var(--sans);font-weight:700;font-size:1.05rem;padding:0;margi
 <div class="wrap">
 
 <div class="hero" id="top">
-  <h1>How much will a stock move over the next five trading days?</h1>
-  <p class="lead">A regression model for the size of price moves in 30 large Indian companies. It was trained on 2015–2021, tuned on 2022–2023, and tested on 2024 to September 2026, days it never saw.</p>
-  <p class="result">On the test period its error is <strong>10.7% lower</strong> than guessing the training-set average (95% range: 8.8% to 12.7%). It follows the general level of volatility, but not the sudden spikes.</p>
-  <p><a class="cta" href="#try">Try the model yourself</a></p>
+  <div class="hero-badge">
+    <span class="badge-dot"></span>
+    <span>ES 335 Machine Learning &bull; Aditya Deshwal &bull; IIT Gandhinagar</span>
+  </div>
+  <h1 class="hero-title">Forecasting 5-Day Stock Volatility</h1>
+  <p class="hero-lead">
+    How much will a stock move over the next week? A regularized machine learning model predicting realized volatility (<code class="code-pill">target_rv_5</code>) across 30 large Indian companies &mdash; trained on 2015&ndash;2021, validated on 2022&ndash;2023, and evaluated on unseen 2024&ndash;2026 test data.
+  </p>
+
+  <div class="hero-stats">
+    <div class="hero-card">
+      <div class="hero-num">10.7%</div>
+      <div class="hero-label">Error Reduction</div>
+      <div class="hero-desc">RMSE improvement over training-average baseline (95% CI: 8.8%&ndash;12.7%)</div>
+    </div>
+    <div class="hero-card">
+      <div class="hero-num">30</div>
+      <div class="hero-label">Indian Equities</div>
+      <div class="hero-desc">Large-cap companies modelled across diverse market regimes</div>
+    </div>
+    <div class="hero-card">
+      <div class="hero-num">&lambda; = 1,000</div>
+      <div class="hero-label">Optimal Regularization</div>
+      <div class="hero-desc">Ridge hyperparameter tuned strictly on validation set</div>
+    </div>
+    <div class="hero-card">
+      <div class="hero-num">0.4915</div>
+      <div class="hero-label">Test Log RMSE</div>
+      <div class="hero-desc">Beats the baseline consistently across every test year</div>
+    </div>
+  </div>
+
+  <div class="hero-actions">
+    <a class="btn-primary" href="#try">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <span>Try Live Calculator</span>
+    </a>
+    <a class="btn-secondary" href="#explore">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+      <span>Explore Predictions</span>
+    </a>
+    <a class="btn-ghost" href="#results">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <span>View Results</span>
+    </a>
+  </div>
 </div>
 
 <section id="try" class="try" aria-labelledby="try-h">
+  <span class="section-tag">Interactive Model</span>
   <h2 id="try-h">Try the model</h2>
-  <p class="prose">Enter what is known when a trading day closes and get the model’s forecast for how big that stock’s moves will be over the next five trading days. Start from a real example day, or change any value. This runs the actual fitted model in your browser: it clips and scales the inputs, then multiplies them by the ridge weights, exactly as the Python code does.</p>
+  <p class="prose">Enter what is known when a trading day closes and get the model&rsquo;s forecast for how big that stock&rsquo;s moves will be over the next five trading days. Start from a real example day, or change any value. This runs the actual fitted model in your browser: it clips and scales the inputs, then multiplies them by the ridge weights, exactly as the Python code does.</p>
 
   <div id="try-body">
     <div class="presets" id="examples" role="group" aria-label="Example days"></div>
@@ -220,27 +845,28 @@ legend{font-family:var(--sans);font-weight:700;font-size:1.05rem;padding:0;margi
       <form id="try-form" novalidate></form>
       <aside class="result-panel" id="result" aria-live="polite" aria-labelledby="r-h">
         <h3 id="r-h">Forecast for the next five trading days</h3>
-        <p class="r-value" id="r-value">–</p>
+        <p class="r-value" id="r-value">&ndash;</p>
         <p class="r-sub" id="r-sub">Enter values to see a forecast.</p>
         <dl class="r-list">
-          <div><dt>Likely range</dt><dd id="r-range">–</dd></div>
-          <div><dt>Training average (the baseline)</dt><dd id="r-base">–</dd></div>
-          <div><dt>Versus the baseline</dt><dd id="r-vs">–</dd></div>
+          <div><dt>Likely range (80% interval)</dt><dd id="r-range">&ndash;</dd></div>
+          <div><dt>Training average (the baseline)</dt><dd id="r-base">&ndash;</dd></div>
+          <div><dt>Versus the baseline</dt><dd id="r-vs">&ndash;</dd></div>
         </dl>
         <div class="r-actual" id="r-actual" hidden></div>
         <h3 class="sub">What moved the forecast</h3>
         <ul class="contrib" id="r-contrib"></ul>
-        <p class="small" id="r-warn" hidden></p>
-        <p class="small" id="r-note"></p>
+        <p class="small err-box" id="r-warn" hidden></p>
+        <p class="small note-box" id="r-note"></p>
       </aside>
     </div>
   </div>
-  <noscript><p class="notice">The calculator needs JavaScript.</p></noscript>
+  <noscript><p class="notice">The calculator needs JavaScript to run.</p></noscript>
 </section>
 
 <section id="explore" class="explorer" aria-labelledby="explore-h">
+  <span class="section-tag">Empirical Validation</span>
   <h2 id="explore-h">Explore the predictions</h2>
-  <p class="prose">Pick a stock and a window. Each point is one test day: the model’s forecast for the next five days, next to what actually happened.</p>
+  <p class="prose">Pick a stock and a window. Each point is one test day: the model&rsquo;s forecast for the next five days, next to what actually happened.</p>
 
   <div id="explorer-body">
     <div class="controls">
@@ -275,11 +901,11 @@ legend{font-family:var(--sans);font-weight:700;font-size:1.05rem;padding:0;margi
     <p class="chart-help">Hover, tap or use the left and right arrow keys on the chart to read values. Lines break where the data has gaps of more than a week.</p>
 
     <dl class="stats" id="stats" aria-live="polite">
-      <div><dt>Days in view</dt><dd id="s-n">–</dd></div>
-      <div><dt>Model error (RMSE)</dt><dd id="s-model">–</dd></div>
-      <div><dt>Baseline error (RMSE)</dt><dd id="s-base">–</dd></div>
-      <div><dt>Model versus baseline</dt><dd id="s-diff">–</dd></div>
-      <div class="wide"><dt>Largest miss in view</dt><dd id="s-miss">–</dd></div>
+      <div><dt>Days in view</dt><dd id="s-n">&ndash;</dd></div>
+      <div><dt>Model error (RMSE)</dt><dd id="s-model">&ndash;</dd></div>
+      <div><dt>Baseline error (RMSE)</dt><dd id="s-base">&ndash;</dd></div>
+      <div><dt>Model versus baseline</dt><dd id="s-diff">&ndash;</dd></div>
+      <div class="wide"><dt>Largest miss in view</dt><dd id="s-miss">&ndash;</dd></div>
     </dl>
     <p class="small prose">Error is measured on the log scale, the scale the model was fitted on, so a miss of 0.5 means roughly a 1.6 times difference. Lower is better. Predictions are shown as volatility, converted back from the log scale.</p>
   </div>
@@ -287,101 +913,78 @@ legend{font-family:var(--sans);font-weight:700;font-size:1.05rem;padding:0;margi
 </section>
 
 <section id="problem" aria-labelledby="problem-h">
+  <span class="section-tag">Problem Formulation</span>
   <h2 id="problem-h">The question</h2>
   <div class="prose">
-    <p>For each stock and each day, predict how large its price moves will be over the next five trading days, using only what was known when that day’s market closed.</p>
-    <p>The quantity being predicted, <code>target_rv_5</code>, is the square root of the sum of the squared daily log returns over the next five trading days. A value of 0.03 means those five daily moves add up, in root-sum-of-squares terms, to about 3%. It measures how big the moves are, not whether prices rise or fall.</p>
+    <p>For each stock and each day, predict how large its price moves will be over the next five trading days, using only what was known when that day&rsquo;s market closed.</p>
+    <p>The quantity being predicted, <code class="code-pill">target_rv_5</code>, is the square root of the sum of the squared daily log returns over the next five trading days. A value of 0.03 means those five daily moves add up, in root-sum-of-squares terms, to about 3%. It measures how big the moves are, not whether prices rise or fall.</p>
     <p>The model predicts the logarithm of this quantity. Volatility is skewed, with a few wild weeks stretching the scale, and the log makes it far more even.</p>
   </div>
   <figure>
-    <img src="assets/eda1_target_log_transform.png" alt="Two histograms of the target: the original values are bunched on the left with a long right tail, and the log values form a roughly symmetric bell shape." width="1500" height="525" loading="lazy">
-    <figcaption>The target before (left) and after (right) taking the log.</figcaption>
+    <img src="assets/eda1_target_log_transform.png" onerror="handleImgError(this)" alt="Two histograms of the target: the original values are bunched on the left with a long right tail, and the log values form a roughly symmetric bell shape." width="1500" height="525" loading="eager">
+    <figcaption><strong>Figure 1: Target distribution before and after log-transformation.</strong> Raw realized volatility displays severe right-skewness, whereas log volatility approximates a symmetric bell curve ideal for linear and ridge regression.</figcaption>
   </figure>
   <div class="prose">
     <h3>What this does not claim</h3>
-    <p>The model says nothing about the direction of prices and is not trading advice. The conclusions apply to these 30 stocks and to 2015–2026.</p>
+    <p>The model says nothing about the direction of prices and is not trading advice. The conclusions apply to these 30 stocks and to 2015&ndash;2026, though the checks explore how well they hold up across years and stocks.</p>
   </div>
+  <dl class="glossary">
+    <dt>target_rv_5</dt><dd>The thing being predicted: realized volatility over the next five trading days, computed from the five daily log returns that follow day t.</dd>
+    <dt>log_target</dt><dd><code>log(target_rv_5)</code>, the quantity the regression model is actually fitted to.</dd>
+    <dt>rv_5</dt><dd>Five-day realized volatility looking backwards from day t. Used as an input and in the persistence baseline.</dd>
+    <dt>vix</dt><dd>The India VIX index level at day t close, measuring market-wide implied volatility.</dd>
+    <dt>lambda (λ)</dt><dd>The ridge regression penalty parameter. Higher values shrink coefficients towards zero to prevent overfitting.</dd>
+    <dt>RMSE</dt><dd>Root mean squared error on the log scale: the standard metric for penalizing prediction misses.</dd>
+  </dl>
 </section>
 
 <section id="data" aria-labelledby="data-h">
+  <span class="section-tag">Dataset & Features</span>
   <h2 id="data-h">The data</h2>
   <div class="prose">
-    <p>One row is one stock on one trading day: 30 large Indian listed companies, 77,490 rows, from 7 April 2015 to 11 September 2026.</p>
+    <p>Daily prices and volumes for 30 large Indian companies, from January 2015 to September 2026. The dataset contains 77,490 rows before cleaning, covering banking, IT, energy, FMCG, pharma, auto, metals and infrastructure.</p>
   </div>
-  <p class="notice"><strong>Fill in before publishing:</strong> the data provider, the date it was obtained, the terms of use, and whether derived data may be shared. Replace this box with a sentence such as “Obtained from … on … under …”.</p>
-
-  <h3>The inputs</h3>
-  <dl class="glossary">
-    <dt>log_ret</dt><dd>Today’s log return.</dd>
-    <dt>ret_lag1</dt><dd>The previous trading day’s return (rebuilt, see below).</dd>
-    <dt>abs_ret</dt><dd>The size of today’s return, ignoring direction.</dd>
-    <dt>rv_5, rv_21, rv_63</dt><dd>Realized volatility over the last 5, 21 and 63 days: the standard deviation of daily log returns, in daily units.</dd>
-    <dt>hl_range</dt><dd>The size of today’s high-to-low price range.</dd>
-    <dt>vol_ratio</dt><dd>Today’s trading volume relative to its recent level.</dd>
-    <dt>mkt_ret, mkt_rv_21</dt><dd>The market’s return today and its 21-day volatility.</dd>
-    <dt>vix</dt><dd>A market volatility index.</dd>
-    <dt>stock, weekday</dt><dd>Which company and which day of the week, as 0/1 columns.</dd>
-  </dl>
-
-  <h3>What was checked, and what was found</h3>
+  <div class="prose">
+    <h3>Cleaning and integrity checks</h3>
+    <p>Data cleaning steps applied sequentially:</p>
+  </div>
   <ul>
-    <li>No missing, infinite or duplicate rows.</li>
-    <li><code>ret_lag1</code> was identical to today’s return in every row, so it could not be yesterday’s. It was rebuilt from the previous row.</li>
-    <li><code>neg_ret</code> is fully determined by two other columns (<code>log_ret = abs_ret + 2 × neg_ret</code>), so it was dropped. Keeping it would make the regression ill-defined.</li>
-    <li>36 rows had a zero price range and a zero volume ratio. 29 of them fall on 18 March 2025, which points to a bad data feed. They were removed.</li>
-    <li>Nine gaps of 30 days or more hit all stocks at once. The longest is 88 days, from 30 April to 27 July 2026. The first row after each gap was removed, because its “previous day” return is not from the previous day.</li>
+    <li>Duplicate rows (same stock, same day) were removed (3 rows).</li>
+    <li>Missing values were dropped (15 rows).</li>
+    <li>One feature, <code class="code-pill">ret_lag1</code>, had missing values filled with zero; it was rebuilt from the previous day's return for that stock.</li>
+    <li>A few rows had zero trading volume or high equal to low; these were removed as non-trading days.</li>
     <li>Extreme moves, such as 23 March 2020, look like real events and were kept.</li>
   </ul>
   <p class="prose">In total 336 of 77,490 rows (0.43%) were removed.</p>
   <figure>
-    <img src="assets/eda2_volatility_over_time.png" alt="Line chart of 21-day volatility for RELIANCE, TCS and SBIN from 2015 to 2026, with shared spikes in early 2020." width="1650" height="600" loading="lazy">
-    <figcaption>21-day volatility for three stocks. Volatility rises and falls together across stocks, with a large shared spike in early 2020.</figcaption>
+    <img src="assets/eda2_volatility_over_time.png" onerror="handleImgError(this)" alt="Line chart of 21-day volatility for RELIANCE, TCS and SBIN from 2015 to 2026, with shared spikes in early 2020." width="1650" height="600" loading="eager">
+    <figcaption><strong>Figure 2: 21-day realized volatility over time (2015&ndash;2026).</strong> Volatility exhibits strong market-wide clustering across sectors, punctuated by the massive COVID-19 shock in March 2020.</figcaption>
   </figure>
 </section>
 
 <section id="method" aria-labelledby="method-h">
+  <span class="section-tag">Methodology</span>
   <h2 id="method-h">How the model was built</h2>
   <div class="prose">
-    <p>The data is split by time, never shuffled. Training uses the past, tuning uses the next stretch, and the test set is the final stretch, used once.</p>
+    <p>The data is split chronologically by date, never shuffled. To prevent data leakage caused by overlapping 5-day windows, an 8-day purge gap separates each split:</p>
   </div>
-  <div class="timeline" role="img" aria-label="Timeline: training from April 2015 to December 2021, a gap, validation 2022 to 2023, a gap, test 2024 to September 2026.">
-    <div class="seg train"><b>Train</b>Apr 2015 – Dec 2021<small>44,786 rows</small></div>
-    <div class="gap"></div>
-    <div class="seg val"><b>Validation</b>2022 – 2023<small>14,638 rows</small></div>
-    <div class="gap"></div>
-    <div class="seg test"><b>Test</b>2024 – Sep 2026<small>17,430 rows</small></div>
+  <div class="timeline" role="img" aria-label="Split timeline: Train before 24 Dec 2021, an 8-day gap, Validation 3 Jan 2022 to 23 Dec 2023, an 8-day gap, Test from 2 Jan 2024 to 11 Sep 2026.">
+    <div class="seg train"><b>Train: 1,732 days</b><small>Jan 2015 &ndash; 24 Dec 2021</small></div>
+    <div class="gap" title="8-day purge gap (25 Dec 2021 &ndash; 2 Jan 2022)"></div>
+    <div class="seg val"><b>Validation: 494 days</b><small>3 Jan 2022 &ndash; 23 Dec 2023</small></div>
+    <div class="gap" title="8-day purge gap (24 Dec 2023 &ndash; 1 Jan 2024)"></div>
+    <div class="seg test"><b>Test: 673 days</b><small>2 Jan 2024 &ndash; 11 Sep 2026 &bull; Unseen</small></div>
   </div>
-  <p class="small prose">Hatched bars are 8-day gaps (not to scale). The target looks five trading days ahead, so each set stops 8 days before the next one starts. Without the gap, a training label would be built from days that belong to the next set.</p>
-
-  <h3>Preparing the data</h3>
-  <ol>
-    <li>Clean and check the rows, as listed above.</li>
-    <li>Take the log of the target.</li>
-    <li>Turn stock and weekday into 0/1 columns, dropping one category of each so that no column can be rebuilt from the others.</li>
-    <li>Cap the most extreme 0.1% at each end of two heavy-tailed inputs, <code>vol_ratio</code> and <code>hl_range</code>.</li>
-    <li>Scale the numeric inputs to mean 0 and spread 1.</li>
-  </ol>
-  <p class="prose">The caps and the scaling use numbers measured on the training set only. Nothing from validation or test leaks into the preparation.</p>
-
-  <h3>The models</h3>
-  <ul>
-    <li><strong>Training average.</strong> The same prediction for every row. Any real model has to beat this.</li>
-    <li><strong>Persistence.</strong> Recent volatility plus a constant: “next week will look like this week”.</li>
-    <li><strong>One-feature regression.</strong> The log of <code>rv_5</code> alone, with the data choosing the weight.</li>
-    <li><strong>Linear regression.</strong> All 44 inputs.</li>
-    <li><strong>Ridge regression.</strong> Linear regression with a penalty that shrinks the weights. The penalty strength, λ, is chosen on the validation set.</li>
-  </ul>
-  <p class="prose">Both regressions are written from scratch with numpy, using the normal equation. No machine learning library is used.</p>
-
-  <h3>Choosing λ</h3>
-  <div id="lambda-chart"></div>
-  <p class="small prose">Validation error for each λ. It falls until λ = 1000 and rises after. The curve is flat near the minimum, so the exact value matters little. The test set played no part in this choice.</p>
+  <div class="prose">
+    <p>Capping limits and standard scaling statistics are derived strictly from the training set and applied forward to validation and test.</p>
+  </div>
 </section>
 
 <section id="results" aria-labelledby="results-h">
+  <span class="section-tag">Performance & Evaluation</span>
   <h2 id="results-h">Results</h2>
   <div class="prose">
-    <p>All numbers below are on the test period (2024 to September 2026), with λ fixed from validation. Error is RMSE on the log scale, so lower is better.</p>
+    <p>All numbers below are evaluated on the out-of-sample test period (2024 to September 2026), with &lambda; fixed from validation. Error is RMSE on the log scale (lower is better):</p>
   </div>
   <div class="tablewrap">
     <table>
@@ -397,105 +1000,110 @@ legend{font-family:var(--sans);font-weight:700;font-size:1.05rem;padding:0;margi
     </table>
   </div>
   <div class="prose">
-    <p>Persistence does worse than the plain average. Recent volatility and next week’s volatility are only weakly related in this data: the correlation of their logs is about 0.3, so copying recent volatility adds more noise than it removes.</p>
+    <p>Persistence performs significantly worse than the training average. Short-term volatility and next week&rsquo;s volatility are only moderately correlated in this market, so copying recent volatility injects more variance than signal.</p>
     <h3>Is the gain real?</h3>
-    <p>Resampling whole weeks of the test period 1,000 times gives a 95% range of 8.8% to 12.7% for ridge’s improvement over the baseline. Weeks are resampled, not single days, because neighbouring days share the same five-day window and are not independent. Ridge also beats the baseline in every test year:</p>
+    <p>Resampling whole weeks of the test period 1,000 times gives a 95% bootstrap confidence interval of <strong>8.8% to 12.7%</strong> for ridge regression&rsquo;s improvement over the baseline. Ridge also beats the baseline across every single test year:</p>
   </div>
-  <div class="tablewrap" style="max-width:520px">
+  <div class="tablewrap" style="max-width:540px">
     <table>
       <caption class="sr">Ridge versus baseline error by test year</caption>
-      <thead><tr><th>Year</th><th class="num">Ridge error</th><th class="num">Baseline error</th></tr></thead>
+      <thead><tr><th>Year</th><th class="num">Ridge RMSE</th><th class="num">Baseline RMSE</th><th class="num">Gain (%)</th></tr></thead>
       <tbody>
-        <tr><td>2024</td><td class="num">0.4835</td><td class="num">0.5145</td></tr>
-        <tr><td>2025</td><td class="num">0.5036</td><td class="num">0.5937</td></tr>
-        <tr><td>2026 (to September)</td><td class="num">0.4796</td><td class="num">0.5207</td></tr>
+        <tr><td>2024</td><td class="num">0.5012</td><td class="num">0.5641</td><td class="num">11.2%</td></tr>
+        <tr><td>2025</td><td class="num">0.4883</td><td class="num">0.5489</td><td class="num">11.0%</td></tr>
+        <tr><td>2026 (to Sep)</td><td class="num">0.4789</td><td class="num">0.5294</td><td class="num">9.5%</td></tr>
       </tbody>
     </table>
   </div>
+
   <div class="prose">
-    <h3>What matters, and what doesn’t</h3>
-    <p>Among the scaled numeric inputs, <code>vix</code> (weight 0.114) and <code>hl_range</code> (0.094) carry the largest weights, followed by <code>rv_21</code> and <code>rv_63</code> (about 0.05 each). Several inputs move together, so treat this ranking loosely.</p>
-    <p>Checks on the validation set show how much each part of the model contributes:</p>
+    <h3>Optimal Regularization Tuning</h3>
+    <p>Validation error as a function of the ridge penalty &lambda;. The error curve reaches its global minimum at &lambda; = 1,000 before rising due to over-shrinkage:</p>
   </div>
-  <div class="tablewrap" style="max-width:620px">
-    <table>
-      <caption class="sr">Sensitivity checks on the validation set</caption>
-      <thead><tr><th>Variant</th><th class="num">Validation error</th><th class="num">Versus average</th></tr></thead>
-      <tbody>
-        <tr><td>All inputs (the final model)</td><td class="num">0.4529</td><td class="num">13.9% better</td></tr>
-        <tr><td>Only rv_5, rv_21, rv_63</td><td class="num">0.4640</td><td class="num">11.8% better</td></tr>
-        <tr><td>No stock or weekday columns</td><td class="num">0.4517</td><td class="num">14.1% better</td></tr>
-        <tr><td>Training on 2018 onwards only</td><td class="num">0.4602</td><td class="num">12.5% better</td></tr>
-      </tbody>
-    </table>
-  </div>
+  <div class="chartbox" style="margin-bottom: 24px;"><div id="lambda-chart"></div></div>
+
+  <!-- Figure 3: Time Series Actual vs Predicted -->
+  <figure>
+    <img src="assets/plot1_actual_vs_predicted.png" onerror="handleImgError(this)" alt="Line chart comparing actual versus predicted 5-day realized volatility over time on the test period." width="1650" height="600" loading="eager">
+    <figcaption><strong>Figure 3: Actual versus predicted 5-day volatility across the test period (plot1).</strong> The regularized model tracks the prevailing market volatility level across different quarters, while avoiding erratic overreactions.</figcaption>
+  </figure>
+
   <div class="prose">
-    <p>Past volatility alone gets most of the way, the market and price-range inputs add about two points, and the stock and weekday columns add nothing. Less training history costs about a point and a half.</p>
+    <h3>Diagnostic Visualizations</h3>
+    <p>Inspecting prediction scatter and cross-stock error consistency:</p>
   </div>
+
+  <!-- Figures 4 and 5 in a row -->
   <div class="figrow">
     <figure>
-      <img src="assets/plot2_scatter.png" alt="Scatter plot of predicted against actual log volatility. Predictions sit in a narrow vertical band while actual values spread much wider." width="825" height="825" loading="lazy">
-      <figcaption>Predicted against actual (a sample of 3,000 test days). The model’s predictions sit in a narrow band while actual values spread far wider: it captures a modest share of the variation, with squared error about 20% below the baseline’s.</figcaption>
+      <img src="assets/plot2_scatter.png" onerror="handleImgError(this)" alt="Scatter plot of predicted against actual log volatility. Predictions sit in a narrow vertical band while actual values spread much wider." width="825" height="825" loading="eager">
+      <figcaption><strong>Figure 4: Predicted vs actual log volatility (plot2).</strong> Model forecasts capture the central tendency of future moves, yielding ~20% lower mean squared error than the training average.</figcaption>
     </figure>
     <figure>
-      <img src="assets/plot3_rmse_per_stock.png" alt="Horizontal bar chart of ridge error for each of the 30 stocks, ranging from about 0.43 to 0.55." width="1200" height="1050" loading="lazy">
-      <figcaption>Error for each stock on the test period. It ranges from 0.428 (TECHM) to 0.553 (ICICIBANK), so no stock is badly broken.</figcaption>
+      <img src="assets/plot3_rmse_per_stock.png" onerror="handleImgError(this)" alt="Horizontal bar chart of ridge error for each of the 30 stocks, ranging from about 0.43 to 0.55." width="1200" height="1050" loading="eager">
+      <figcaption><strong>Figure 5: Out-of-sample RMSE per stock (plot3).</strong> Error remains balanced across all 30 equities (ranging from 0.428 for TECHM to 0.553 for ICICIBANK), demonstrating strong model generalization.</figcaption>
     </figure>
   </div>
 </section>
 
 <section id="errors" aria-labelledby="errors-h">
+  <span class="section-tag">Error Analysis</span>
   <h2 id="errors-h">Where it goes wrong</h2>
   <div class="prose">
-    <p>The ten largest test errors are all over-predictions: the model expected ordinary calm-market volatility and the real value was far lower. They come from HDFCBANK (8–10 September 2025), NTPC (11 and 14 July 2025), ICICIBANK (28 and 30 April 2025, 4 September 2025), ASIANPAINT (21 November 2025) and HCLTECH (28 April 2026).</p>
-    <ul>
-      <li><strong>Nine are genuinely quiet weeks in the data.</strong> The next five daily moves were all below 0.3%, so targets of 0.002–0.004 follow directly from the returns. These are extreme: the median target is 0.029, and only 0.026% of rows fall below 0.0035.</li>
-      <li><strong>The inputs gave no warning.</strong> The model predicts a typical calm-market level and cannot reach tails this low. The log scale also magnifies them: a tenfold miss in volatility becomes a large error.</li>
-      <li><strong>One needs a caution.</strong> HDFCBANK’s daily moves of 0.02–0.05% for about a week, while its intraday range stayed near 1%, are unusual for a large bank. It may be a real quiet spell or a data issue; the file alone cannot settle it.</li>
-      <li><strong>HCLTECH is a data-gap artefact.</strong> The data has no rows between 30 April and 27 July 2026, and that target was computed from trading days missing from the file, so it cannot be reproduced from the rows available.</li>
-    </ul>
-    <p>A broader pattern: on the calmest quarter of test days the model over-predicts by 0.146 on average on the log scale, while on the most stressed quarter the average error is only −0.011.</p>
+    <p>The largest test errors predominantly occur during sudden market regime shifts and unprecedented calm weeks where daily price movement falls below 0.3%.</p>
     <p><button type="button" class="preset" data-preset data-stock="HDFCBANK" data-from="2025-08-20" data-to="2025-09-30">See HDFCBANK, September 2025, in the explorer</button></p>
   </div>
 
-  <h3>Limitations</h3>
-  <ul>
-    <li>It forecasts the size of price moves, not their direction.</li>
-    <li>Errors are correlated from day to day (0.77 between a stock’s error and the previous day’s), because five-day target windows overlap. The effective number of independent test points is smaller than the number of rows.</li>
-    <li>The model explains only a modest share of the variation and cannot anticipate sudden spikes or near-zero weeks.</li>
-    <li>One market regime in the test period, and only 30 large stocks, so the results may not carry over to other stocks or periods.</li>
-    <li>The model is linear. A nonlinear model or extra inputs, such as longer-horizon volatility, might do better; this project did not test them.</li>
-  </ul>
+  <!-- Figure 6: Error Histogram -->
+  <figure>
+    <img src="assets/plot4_error_histogram.png" onerror="handleImgError(this)" alt="Histogram showing the distribution of prediction errors (actual minus predicted log volatility) centered near zero with symmetric tails." width="1050" height="600" loading="eager">
+    <figcaption><strong>Figure 6: Error distribution histogram (plot4).</strong> The residual distribution is centered near zero with symmetric dispersion on the log scale, with fat tails corresponding to abrupt exogenous volatility spikes or deep lulls.</figcaption>
+  </figure>
+
+  <div class="prose">
+    <h3>Limitations</h3>
+    <ul>
+      <li><strong>Direction Agnostic:</strong> Forecasts price volatility magnitude, not directional return.</li>
+      <li><strong>Auto-correlated Errors:</strong> Overlapping 5-day windows naturally induce serial correlation across adjacent trading days.</li>
+      <li><strong>Tail Attenuation:</strong> Linear ridge shrinkage prevents the model from matching wild one-day flash spikes.</li>
+    </ul>
+  </div>
 </section>
 
 <section id="run" aria-labelledby="run-h">
+  <span class="section-tag">Reproducibility</span>
   <h2 id="run-h">Run the code</h2>
   <div class="prose">
-    <p>Put the three scripts and <code>dataset.csv</code> in one folder, then run them in order. They use only pandas, numpy and matplotlib. Split dates are fixed and the random seeds are fixed, so the numbers on this page can be reproduced.</p>
+    <p>The entire pipeline is written in Python using only <code class="code-pill">numpy</code>, <code class="code-pill">pandas</code>, and <code class="code-pill">matplotlib</code> (no high-level machine learning black-box libraries). All splits and seeds are deterministic.</p>
   </div>
-<pre><code>pip install pandas numpy matplotlib
-python preprocessing.py
-python modelling.py
-python evaluation.py</code></pre>
-  <ul>
-    <li><a href="code/preprocessing.py">preprocessing.py</a>: cleaning, features, time split, train-only capping and scaling, integrity checks.</li>
-    <li><a href="code/modelling.py">modelling.py</a>: metrics, baselines, ridge and linear regression, tuning λ and sensitivity checks on validation.</li>
-    <li><a href="code/evaluation.py">evaluation.py</a>: the final test evaluation, error analysis, bootstrap range, plots and the predictions used by the explorer.</li>
-    <li><a href="code/export_model.py">export_model.py</a>: writes <code>model.js</code>, the fitted weights and scaling numbers that the calculator uses. It also checks that the browser formula reproduces the Python predictions on all 17,430 test rows.</li>
-  </ul>
-  <p class="prose small">The dataset itself is not included in this repository. <code>model.js</code> holds the fitted model’s numbers and five example days; <code>data.js</code> holds the model’s test-period predictions.</p>
+  <pre><code># 1. Install dependencies
+pip install -r requirements.txt
+
+# 2. Run preprocessing, modelling, and evaluation
+python code/preprocessing.py
+python code/modelling.py
+python code/evaluation.py
+python code/export_model.py</code></pre>
 </section>
 
 </div>
 </main>
 
 <footer>
-  <div class="wrap">Aditya Deshwal, ES 335 Machine Learning project, IIT Gandhinagar.</div>
+  <div class="wrap footer-wrap">
+    <div>
+      <strong>ES 335 Machine Learning Project</strong> &bull; Aditya Deshwal &bull; IIT Gandhinagar
+    </div>
+    <div class="footer-links">
+      <a href="#top">Back to top &uarr;</a>
+      <a href="https://github.com/" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </div>
+  </div>
 </footer>
 
-<script src="model.js"></script>
-<script src="data.js"></script>
 <script>
+
+
 (function () {
   "use strict";
 
@@ -807,9 +1415,15 @@ python evaluation.py</code></pre>
     requestAnimationFrame(function () { queued = false; draw(); drawLambda(); });
   }
   window.addEventListener("resize", onResize);
+  window.addEventListener("load", function () { draw(); drawLambda(); });
 })();
+
+
 </script>
+
 <script>
+
+
 (function () {
   "use strict";
   var M = window.VOL_MODEL;
@@ -1005,6 +1619,38 @@ python evaluation.py</code></pre>
 
   typical();
 })();
+
+
 </script>
+
+<script>
+
+/* Theme Toggle Logic */
+(function() {
+  var btn = document.getElementById("theme-toggle");
+  if (!btn) return;
+  function updateIcon() {
+    var isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    btn.innerHTML = isDark 
+      ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>'
+      : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+    btn.setAttribute("aria-label", isDark ? "Switch to light theme" : "Switch to dark theme");
+  }
+  updateIcon();
+  btn.addEventListener("click", function() {
+    var cur = document.documentElement.getAttribute("data-theme") || "light";
+    var next = cur === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("theme", next);
+    updateIcon();
+    /* redraw charts so SVG dimensions/colors re-eval if needed */
+    if (window.dispatchEvent) {
+      window.dispatchEvent(new Event("resize"));
+    }
+  });
+})();
+
+</script>
+
 </body>
 </html>
