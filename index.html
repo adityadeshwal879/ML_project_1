@@ -18,19 +18,19 @@
     document.documentElement.setAttribute("data-theme", theme);
   })();
 
-  /* Robust Image Error Fallback: automatically tries assets/, results/, and root */
+  /* Robust Image Error Fallback: automatically tries assets/, root, and results/ */
   function handleImgError(el) {
     var tried = parseInt(el.getAttribute("data-tried") || "0", 10);
     var originalSrc = el.getAttribute("data-original-src") || el.getAttribute("src");
     el.setAttribute("data-original-src", originalSrc);
     var filename = originalSrc.split("/").pop();
     var paths = [
+      filename,
       "assets/" + filename,
       "results/" + filename,
-      filename,
-      "./assets/" + filename,
-      "./results/" + filename
-    ];
+      "./" + filename,
+      "./assets/" + filename
+    ].filter(function(p) { return p !== originalSrc; });
     if (tried < paths.length) {
       el.setAttribute("data-tried", tried + 1);
       el.src = paths[tried];
