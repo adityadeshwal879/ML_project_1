@@ -338,6 +338,3 @@ No code was copied from other repositories, tutorials or forums. The code was wr
 - **Browser privacy.** The website does not set cookies, use local storage or send visitor data anywhere. Loading the two fonts means each visitor's browser contacts Google Fonts (fonts.googleapis.com and fonts.gstatic.com), as with any page that uses Google Fonts.
 - **Derived data.** `data.js` and `model.js` contain values derived from the dataset (section 4). Publish them only if the dataset's terms allow it.
 
-## 12. License
-
-**[TO FILL IN: choose a license for the code, for example MIT, or state "all rights reserved". Check the dataset's terms separately; this license does not cover the dataset.]**
